@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ごはんルーレット</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1D9E75;--green-d:#0F6E56;--green-l:#E1F5EE;
+  --bg:#F7F6F2;--card:#fff;--border:#E8E6E0;
+  --text:#1a1a1a;--text2:#666;--text3:#aaa;
+  --red:#E24B4A;--shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:100dvh;}
+.app{max-width:480px;margin:0 auto;padding:0 0 80px;}
+.header{padding:16px 16px 0;text-align:center;}
+.header h1{font-size:20px;font-weight:700;color:var(--green);letter-spacing:0.1em;}
+.header .sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:100;}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:'Zen Maru Gothic',sans-serif;font-size:10px;padding:4px 0;transition:color 0.2s;}
+.tab.active{color:var(--green);}
+.tab-icon{font-size:22px;line-height:1;}
+.shop-bar{padding:12px 16px 8px;}
+.shop-bar select{width:100%;padding:12px 36px 12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:'Zen Maru Gothic',sans-serif;background:var(--card);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D9E75' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;box-shadow:var(--shadow);}
+.cat-scroll{padding:0 16px 8px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.cat-scroll::-webkit-scrollbar{display:none;}
+.chip{display:inline-block;padding:6px 14px;border-radius:99px;font-size:12px;font-family:'Zen Maru Gothic',sans-serif;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;margin-right:6px;transition:all 0.15s;}
+.chip.on{background:var(--green);color:#fff;border-color:var(--green);}
+.roulette-section{padding:8px 16px 16px;display:flex;flex-direction:column;align-items:center;}
+.count-label{font-size:12px;color:var(--text3);margin-bottom:10px;align-self:flex-start;}
+.wheel-wrap{position:relative;width:min(300px,85vw);height:min(300px,85vw);margin-bottom:20px;}
+.wheel-wrap canvas{width:100%;height:100%;display:block;}
+.pointer-wrap{position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:10;}
+.spin-btn{width:min(120px,34vw);height:min(120px,34vw);border-radius:50%;background:var(--green);color:#fff;border:4px solid #fff;font-family:'Zen Maru Gothic',sans-serif;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 0 0 3px var(--green),0 8px 24px rgba(29,158,117,0.35);transition:transform 0.15s;letter-spacing:0.1em;}
+.spin-btn:hover{transform:scale(1.05);}
+.spin-btn:active{transform:scale(0.95);}
+.spin-btn:disabled{background:#ccc;box-shadow:0 0 0 3px #ccc;cursor:not-allowed;transform:none;}
+.result-card{width:100%;background:var(--card);border-radius:16px;padding:20px;margin-top:16px;box-shadow:var(--shadow);border:1.5px solid var(--green-l);animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes pop{from{transform:scale(0.8) translateY(10px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.result-num{font-size:56px;font-weight:700;color:var(--green);line-height:1;}
+.result-name{font-size:20px;font-weight:700;margin-top:6px;color:var(--text);}
+.result-cat{font-size:12px;color:var(--text3);margin-top:3px;}
+.result-price{font-size:15px;color:var(--text2);margin-top:6px;font-weight:500;}
+.manage-wrap{padding:0 16px;}
+.section{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sec-title{font-size:12px;color:var(--text2);font-weight:700;letter-spacing:0.05em;}
+.menu-list{max-height:400px;overflow-y:auto;}
+.mi{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+.mi:last-child{border-bottom:none;}
+.mi input[type=checkbox]{width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:var(--green);}
+.mi-num{font-size:13px;font-weight:700;color:var(--green);min-width:40px;}
+.mi-name{flex:1;font-size:13px;color:var(--text);}
+.mi-cat{font-size:10px;color:var(--text3);min-width:44px;text-align:right;}
+.mi-price{font-size:12px;color:var(--text2);min-width:40px;text-align:right;}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:15px;padding:3px 5px;border-radius:6px;flex-shrink:0;transition:all 0.15s;color:var(--text3);}
+.icon-btn:hover{background:var(--bg);}
+.icon-btn.edit:hover{color:var(--green);}
+.icon-btn.del:hover{color:var(--red);background:#fef2f2;}
+.mi-edit{display:flex;flex-direction:column;gap:6px;background:var(--green-l);border-radius:10px;padding:10px;margin:4px 0;}
+.mi-edit-row{display:flex;gap:6px;}
+.mi-edit input{padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Zen Maru Gothic',sans-serif;background:#fff;color:var(--text);outline:none;width:100%;}
+.mi-edit input:focus{border-color:var(--green);}
+.mi-edit-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:4px;}
+.add-form{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.add-form input{padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);color:var(--text);outline:none;}
+.add-form input:focus{border-color:var(--green);}
+.empty{text-align:center;padding:2rem;color:var(--text3);font-size:13px;}
+.shop-form{display:flex;gap:8px;margin-bottom:12px;}
+.shop-form input{flex:1;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);color:var(--text);outline:none;}
+.shop-form input:focus{border-color:var(--green);}
+.shop-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);}
+.shop-item:last-child{border-bottom:none;}
+.btn{padding:10px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:'Zen Maru Gothic',sans-serif;cursor:pointer;white-space:nowrap;transition:all 0.15s;font-weight:500;}
+.btn:hover{background:var(--bg);}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-g:hover{background:var(--green-d);}
+.btn-sm{padding:7px 11px;font-size:12px;}
+.toggle-label{font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.update-section{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+.update-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.update-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0.05em;}
+.update-date{font-size:11px;color:var(--text3);}
+.prompt-box{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px;position:relative;}
+.prompt-box pre{white-space:pre-wrap;word-break:break-all;font-family:'Zen Maru Gothic',sans-serif;font-size:12px;}
+.copy-btn{position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.copy-btn:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.paste-area{width:100%;min-height:80px;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);color:var(--text);outline:none;resize:vertical;line-height:1.5;}
+.paste-area:focus{border-color:var(--green);}
+.update-actions{display:flex;gap:8px;margin-top:8px;align-items:center;}
+.update-status{font-size:12px;flex:1;}
+.update-status.ok{color:var(--green);font-weight:500;}
+.update-status.err{color:var(--red);}
+.step{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-text{font-size:12px;color:var(--text2);line-height:1.5;}
+.step-text a{color:var(--green);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🍽 ごはんルーレット</h1>
+    <div class="sub">今日の一品をまわして決めよう</div>
+  </div>
+
+  <div id="tab-roulette">
+    <div class="shop-bar"><select id="activeShop" onchange="onShopChange()"></select></div>
+    <div class="cat-scroll" id="rCatFilter"></div>
+    <div class="roulette-section">
+      <div class="count-label" id="countLabel"></div>
+      <div class="wheel-wrap">
+        <div class="pointer-wrap">
+          <svg width="30" height="36" viewBox="0 0 30 36">
+            <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
+            <polygon points="15,34 1,2 29,2" fill="#E24B4A" filter="url(#ds)"/>
+            <polygon points="15,28 5,6 25,6" fill="#FF7070"/>
+          </svg>
+        </div>
+        <canvas id="wheel" width="600" height="600"></canvas>
+      </div>
+      <button class="spin-btn" id="spinBtn" onclick="spin()">まわす</button>
+      <div id="resultArea" style="width:100%"></div>
+    </div>
+  </div>
+
+  <div id="tab-menu" style="display:none">
+    <div class="shop-bar"><select id="menuShop" onchange="onMenuShopChange()"></select></div>
+    <div class="cat-scroll" id="mCatFilter"></div>
+    <div class="manage-wrap">
+      <div class="update-section" id="updateSection" style="display:none">
+        <div class="update-header">
+          <span class="update-title">🔄 メニューを最新版に更新</span>
+          <span class="update-date" id="updateDate"></span>
+        </div>
+        <div class="step"><div class="step-num">1</div><div class="step-text">下のプロンプトをコピーして <a href="https://claude.ai" target="_blank">Claude.ai</a> に送信</div></div>
+        <div class="prompt-box"><pre id="promptText"></pre><button class="copy-btn" onclick="copyPrompt()">コピー</button></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Claudeが返したJSONをコピー</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">下に貼り付けて「更新」を押す</div></div>
+        <textarea class="paste-area" id="jsonPaste" placeholder='{"updatedAt":"...","items":[...]} をここに貼り付け'></textarea>
+        <div class="update-actions">
+          <div class="update-status" id="updateStatus"></div>
+          <button class="btn btn-g btn-sm" onclick="applyJson()">更新</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sec-head">
+          <span class="sec-title">メニュー一覧</span>
+          <label class="toggle-label"><input type="checkbox" id="toggleAll" onchange="toggleAllVisible()" style="accent-color:var(--green)"> 全選択/解除</label>
+        </div>
+        <div class="menu-list" id="menuList"></div>
+      </div>
+      <div class="section">
+        <div class="sec-title" style="margin-bottom:10px">手動追加</div>
+        <div class="add-form">
+          <input type="text" id="newNum" placeholder="番号" style="width:60px"/>
+          <input type="text" id="newName" placeholder="メニュー名" style="flex:1;min-width:100px"/>
+          <input type="text" id="newPrice" placeholder="価格" style="width:58px"/>
+          <button class="btn btn-g btn-sm" onclick="addMenuItem()">追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-shops" style="display:none">
+    <div class="manage-wrap" style="padding-top:16px">
+      <div class="section">
+        <div class="sec-title" style="margin-bottom:10px">お店を追加</div>
+        <div class="shop-form">
+          <input type="text" id="newShopName" placeholder="お店の名前"/>
+          <button class="btn btn-g" onclick="addShop()">追加</button>
+        </div>
+        <div id="shopList"></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tab-bar">
+    <button class="tab active" onclick="showTab('roulette')"><span class="tab-icon">🎰</span>ルーレット</button>
+    <button class="tab" onclick="showTab('menu')"><span class="tab-icon">📋</span>メニュー</button>
+    <button class="tab" onclick="showTab('shops')"><span class="tab-icon">🏪</span>お店</button>
+  </nav>
+</div>
+
+<script>
+const PALETTE=['#E8534A','#F0874A','#F5C842','#7DC95E','#3DB87A','#3AB8B8','#4A90D9','#7B68EE','#C85EAB','#E84A7A','#5BBFAD','#F5A623','#8BC34A','#29B6F6','#AB47BC','#FF7043'];
+const UPDATE_PROMPT=`https://www.umenu.jp/menus/18.html のサイゼリヤのメニューを以下のJSON形式で出力してください。コードブロックや説明文は不要で、JSONのみ返してください。
+
+{"updatedAt":"ページの最終更新日（例:2026年2月20日）","items":[{"num":"番号","name":"料理名","price":価格の数値,"cat":"カテゴリ名","enabled":true}]}
+
+カテゴリ名は以下を使用: ドリンク/前菜/サラダ/スープ/パン/ピザ/ドリア/パスタ/ハンバーグ/チキン・ステーキ/ライス/デザート
+ドリンク系はenabled:false、それ以外はenabled:true。
+デザートは「すぐに」「あとで」両方ある場合は「すぐに」のみ含める。`;
+
+const SZ=[
+  ['5101','セットドリンクバー',200,'ドリンク',false],['5102','キッズドリンクバー',100,'ドリンク',false],['5103','単品ドリンクバー',300,'ドリンク',false],
+  ['3301','ジョッキビール',400,'ドリンク',false],['3302','グラスビール',280,'ドリンク',false],['3303','ノンアルコールビール',250,'ドリンク',false],
+  ['3304','氷結シチリア産レモン',350,'ドリンク',false],['3306','グラッパ 30ml',300,'ドリンク',false],
+  ['3401','グラスワイン 赤',100,'ドリンク',false],['3402','グラスワイン 白',100,'ドリンク',false],
+  ['3403','デカンタ小 赤',200,'ドリンク',false],['3404','デカンタ小 白',200,'ドリンク',false],
+  ['3405','デカンタ大 赤',400,'ドリンク',false],['3406','デカンタ大 白',400,'ドリンク',false],
+  ['3407','マグナム 赤',1100,'ドリンク',false],['3408','マグナム 白',1100,'ドリンク',false],
+  ['3413','ボトルワイン ドンラファエロ',1100,'ドリンク',false],['3412','ボトルワイン ランブルスコロゼ',1100,'ドリンク',false],
+  ['3414','ボトルワイン ランブルスコセッコ',1100,'ドリンク',false],['3415','ボトルワイン ベルデッキオ',1100,'ドリンク',false],
+  ['3416','ボトルワイン キャンティ',1100,'ドリンク',false],['3419','ボトルワイン キャンティ ルフィナ',2200,'ドリンク',false],
+  ['1423','生ハムとバッファローモッツァレラ盛合せ',500,'前菜',true],['1422','生ハム',320,'前菜',true],
+  ['1417','バッファローモッツァレラのカプレーゼ',430,'前菜',true],['1408','蒸し鶏の香味ソース',280,'前菜',true],['1406','小エビのカクテル',280,'前菜',true],
+  ['1401','辛味チキン',300,'前菜',true],['1405','エスカルゴのオーブン焼き',400,'前菜',true],
+  ['1410','ムール貝のガーリック焼き',400,'前菜',true],['1407','チョリソー',400,'前菜',true],
+  ['1404','ポップコーンシュリンプ',300,'前菜',true],['1402','アロスティチーニ',400,'前菜',true],
+  ['1452','アロスティチーニ Wサイズ',800,'前菜',true],['1403','ほうれん草のソテー',200,'前菜',true],
+  ['1416','ポテトのグリル',300,'前菜',true],['1425','柔らか青豆の温サラダ',200,'前菜',true],['1413','キャロットラペ',200,'前菜',true],
+  ['1202','小エビのサラダ',350,'サラダ',true],['1209','チキンのサラダ',350,'サラダ',true],['1205','わかめのサラダ',350,'サラダ',true],
+  ['1307','たまねぎのズッパ',300,'スープ',true],['1301','コーンクリームスープ',150,'スープ',true],['1305','田舎風ミネストローネ',300,'スープ',true],
+  ['3110','フォッカチオ',150,'パン',true],['3111','ガーリックフォッカチオ',200,'パン',true],
+  ['3113','タラコフォッカチオ',250,'パン',true],['3114','チーズフォッカチオ',250,'パン',true],['3112','シナモンフォッカチオ',200,'パン',true],
+  ['2203','マルゲリータピザ',400,'ピザ',true],['2208','ソーセージピザ',400,'ピザ',true],
+  ['2206','たっぷりコーンのピザ',400,'ピザ',true],['2204','野菜ときのこのピザ',400,'ピザ',true],
+  ['2101','ミラノ風ドリア',300,'ドリア',true],['2103','半熟卵のミラノ風ドリア',350,'ドリア',true],
+  ['2108','焼チーズ ミラノ風ドリア',350,'ドリア',true],['2110','タラコとポップコーンシュリンプのドリア',400,'ドリア',true],
+  ['2115','ポップコーンシュリンプとタラコのクリームグラタン',430,'ドリア',true],
+  ['2301','タラコソース シシリー風',400,'パスタ',true],['2305','カルボナーラ',500,'パスタ',true],
+  ['2318','半熟卵のカルボナーラ',550,'パスタ',true],['2320','小エビのタラコソース',540,'パスタ',true],
+  ['2304','パルマ風スパゲッティ',400,'パスタ',true],['2321','きのことほうれん草のクリームスパゲッティ',600,'パスタ',true],
+  ['2328','イカの墨入りセピアソース',500,'パスタ',true],['2306','ミートソース ボロニア風',400,'パスタ',true],
+  ['2316','半熟卵のミートソース ボロニア風',450,'パスタ',true],['2310','スープ入り塩味ボンゴレ',500,'パスタ',true],
+  ['2303','ペペロンチーノ',300,'パスタ',true],['2317','半熟卵のペペロンチーノ',350,'パスタ',true],['2325','ペンネアラビアータ',430,'パスタ',true],
+  ['2418','ミックスグリル',650,'ハンバーグ',true],['2406','ハンバーグステーキ',400,'ハンバーグ',true],
+  ['2403','イタリアンハンバーグ',500,'ハンバーグ',true],['2407','ディアボラ風ハンバーグ',500,'ハンバーグ',true],
+  ['2402','若鶏のディアボラ風',500,'チキン・ステーキ',true],['2404','柔らかチキンのチーズ焼き',500,'チキン・ステーキ',true],
+  ['2419','ビーフステーキ',1090,'チキン・ステーキ',true],['2417','ラムのランプステーキ',1090,'チキン・ステーキ',true],
+  ['4304','トッピング野菜ソース',100,'チキン・ステーキ',false],
+  ['3101','ライス',150,'ライス',true],['3102','ラージライス',200,'ライス',true],['3103','スモールライス',100,'ライス',true],
+  ['3206','イタリアンプリン',250,'デザート',true],['3212','プリンとティラミス クラシコ盛合せ',500,'デザート',true],
+  ['3201','ティラミス クラシコ',300,'デザート',true],['3205','ミルクジェラート',250,'デザート',true],
+  ['3216','チョコレートケーキ＆ミルクジェラート',500,'デザート',true],['3207','チョコレートケーキ',300,'デザート',true],
+  ['3213','トリフアイスクリーム',350,'デザート',true],['3215','コーヒーゼリー＆ミルクジェラート',350,'デザート',true],
+  ['3214','ジェラート＆シナモンフォッカチオ',450,'デザート',true],
+].map((r,i)=>({id:i+1,num:r[0],name:r[1],price:r[2],cat:r[3],enabled:r[4]}));
+
+const UB=[
+  ['','まぐろたたきねぎラー油',110,'握り(110円)',true],['','びん長まぐろ',110,'握り(110円)',true],
+  ['','えび',110,'握り(110円)',true],['','えびねぎラー油',110,'握り(110円)',true],['','えび明太マヨ',110,'握り(110円)',true],
+  ['','あか貝',110,'握り(110円)',true],['','白とり貝',110,'握り(110円)',true],['','ほっき貝',110,'握り(110円)',true],
+  ['','えんがわ',110,'握り(110円)',true],['','いか',110,'握り(110円)',true],['','いかねぎラー油',110,'握り(110円)',true],
+  ['','いか明太マヨ',110,'握り(110円)',true],['','あかいかげそ',110,'握り(110円)',true],['','〆さば',110,'握り(110円)',true],
+  ['','とろさばたたき',110,'握り(110円)',true],['','あぶらかれい',110,'握り(110円)',true],
+  ['','こはだ',110,'握り(110円)',true],['','大切り活け〆はまち',110,'握り(110円)',true],
+  ['','煮あなご',110,'握り(110円)',true],['','たまご',110,'握り(110円)',true],['','蒸しほたて',110,'握り(110円)',true],
+  ['','まぐろ',120,'握り(120円)',true],['','サーモン',120,'握り(120円)',true],['','オニオンサーモン',120,'握り(120円)',true],
+  ['','焼サーモン',120,'握り(120円)',true],['','サーモンねぎラー油',120,'握り(120円)',true],
+  ['','アボカドシュリンプ',120,'握り(120円)',true],['','生えび',120,'握り(120円)',true],['','いわし',120,'握り(120円)',true],
+  ['','びん長まぐろペッパーマヨ炙り',130,'握り(130円)',true],['','サーモンペッパーマヨ炙り',130,'握り(130円)',true],
+  ['','サーモンマヨ炙り',130,'握り(130円)',true],['','サーモンチーズ炙り',130,'握り(130円)',true],
+  ['','えびペッパーマヨ炙り',130,'握り(130円)',true],['','えびチーズ炙り',130,'握り(130円)',true],
+  ['','ハンバーグ',130,'握り(130円)',true],['','チーズハンバーグ',130,'握り(130円)',true],
+  ['','大切りとろサーモン',130,'握り(130円)',true],['','大切りとろサーモン炙り',130,'握り(130円)',true],
+  ['','北海道産ほたて',130,'握り(130円)',true],['','つぶ貝',130,'握り(130円)',true],
+  ['','こういか',130,'握り(130円)',true],['','真だこ',130,'握り(130円)',true],
+  ['','牛カルビ',150,'握り(150円〜)',true],['','宮城県産金華さば',160,'握り(150円〜)',true],
+  ['','大切りうなぎ',180,'握り(150円〜)',true],['','ふわとろあなご',180,'握り(150円〜)',true],
+  ['','まぐろたたきぐんかん',110,'軍艦・巻物',true],['','まぐたくぐんかん',110,'軍艦・巻物',true],
+  ['','サーモンアボカドぐんかん',110,'軍艦・巻物',true],['','ツナサラダ',110,'軍艦・巻物',true],
+  ['','コーン',110,'軍艦・巻物',true],['','海鮮ユッケ風',110,'軍艦・巻物',true],
+  ['','海鮮サラダ',110,'軍艦・巻物',true],['','いかおくら',110,'軍艦・巻物',true],
+  ['','納豆',110,'軍艦・巻物',true],['','あんきも',110,'軍艦・巻物',true],
+  ['','かにみそ',110,'軍艦・巻物',true],['','いなり',110,'軍艦・巻物',true],
+  ['','まぐろたたき巻',110,'軍艦・巻物',true],['','かっぱ巻',110,'軍艦・巻物',true],
+  ['','お新香巻',110,'軍艦・巻物',true],['','納豆巻',110,'軍艦・巻物',true],
+  ['','えび天巻',110,'軍艦・巻物',true],['','鉄火巻',120,'軍艦・巻物',true],
+  ['','えびマヨ',130,'軍艦・巻物',true],['','いくら',150,'軍艦・巻物',true],
+  ['','茶碗蒸し',260,'サイド',true],['','青さの茶碗蒸し',260,'サイド',true],
+  ['','枝豆',130,'サイド',true],['','スティックチキン',130,'サイド',true],
+  ['','ジューシー鶏もも唐揚げ',270,'サイド',true],['','フライドポテト',150,'サイド',true],
+  ['','大盛チーズポテト',300,'サイド',true],['','こだわり醤油ラーメン',400,'サイド',true],
+  ['','チャーシュー麺',430,'サイド',true],['','たぬきうどん',170,'サイド',true],['','えび天うどん',330,'サイド',true],
+  ['','フローズングレープ',130,'デザート',true],['','やわらかわらび餅',110,'デザート',true],
+  ['','特製プリン',270,'デザート',true],['','チョコレートケーキ',210,'デザート',true],
+  ['','濃厚ベイクドチーズケーキ',270,'デザート',true],['','ソフトクリーム',270,'デザート',true],
+].map((r,i)=>({id:500+i,num:r[0],name:r[1],price:r[2],cat:r[3],enabled:r[4]}));
+
+const KS=[
+  ['','チャンジャにぎり',115,'にぎり(115円)',true],['','ねぎまぐろにぎり',115,'にぎり(115円)',true],
+  ['','ふり塩 熟成まぐろ',115,'にぎり(115円)',true],['','熟成漬けまぐろ',115,'にぎり(115円)',true],
+  ['','極み漬けびんちょう',115,'にぎり(115円)',true],['','ビントロ',115,'にぎり(115円)',true],
+  ['','ゆず塩かつおたたき',115,'にぎり(115円)',true],['','サーモン',115,'にぎり(115円)',true],
+  ['','えび',115,'にぎり(115円)',true],['','生えび',115,'にぎり(115円)',true],
+  ['','甘えび',115,'にぎり(115円)',true],['','肉厚とろ〆さば',115,'にぎり(115円)',true],
+  ['','真いわし',115,'にぎり(115円)',true],['','大葉真いか',115,'にぎり(115円)',true],
+  ['','真いか',115,'にぎり(115円)',true],['','やりいか',115,'にぎり(115円)',true],
+  ['','あなご',115,'にぎり(115円)',true],['','つぶ貝',115,'にぎり(115円)',true],
+  ['','赤貝',115,'にぎり(115円)',true],['','たまご焼き',115,'にぎり(115円)',true],
+  ['','旨だれ牛カルビ',115,'にぎり(115円)',true],['','ハンバーグ',115,'にぎり(115円)',true],
+  ['','はまち',120,'にぎり(120円〜)',true],['','えびアボカド',120,'にぎり(120円〜)',true],
+  ['','サーモンマヨ',120,'にぎり(120円〜)',true],['','オニオンサーモン',120,'にぎり(120円〜)',true],
+  ['','あぶりえびマヨグラタン風',140,'にぎり(120円〜)',true],['','あぶりチーズ豚カルビ',140,'にぎり(120円〜)',true],
+  ['','あぶりチーズサーモン',140,'にぎり(120円〜)',true],['','いか天にぎり',140,'にぎり(120円〜)',true],['','えび天にぎり',140,'にぎり(120円〜)',true],
+  ['','生たこ',165,'にぎり(高価格)',true],['','大葉生たこ',165,'にぎり(高価格)',true],
+  ['','真たこ',180,'にぎり(高価格)',true],['','あじ',180,'にぎり(高価格)',true],
+  ['','大切り はまち',180,'にぎり(高価格)',true],['','炙りたてうなぎ',180,'にぎり(高価格)',true],
+  ['','熟成 真鯛',230,'にぎり(高価格)',true],['','あぶり焼きはらす',230,'にぎり(高価格)',true],['','あわびにぎり',230,'にぎり(高価格)',true],
+  ['','たらマヨ軍艦',115,'軍艦・巻物',true],['','まぐたく軍艦',115,'軍艦・巻物',true],
+  ['','明太とろろ軍艦',115,'軍艦・巻物',true],['','牛すき焼き風軍艦',115,'軍艦・巻物',true],
+  ['','えびマヨ',115,'軍艦・巻物',true],['','コーン',115,'軍艦・巻物',true],
+  ['','ツナサラダ',115,'軍艦・巻物',true],['','シーフードサラダ',115,'軍艦・巻物',true],
+  ['','納豆',115,'軍艦・巻物',true],['','いなり',115,'軍艦・巻物',true],
+  ['','かんぴょう巻',115,'軍艦・巻物',true],['','納豆巻',115,'軍艦・巻物',true],['','ねぎまぐろ鉄火',115,'軍艦・巻物',true],
+  ['','大粒いくら軍艦',180,'軍艦・巻物',true],['','鉄火巻',180,'軍艦・巻物',true],
+  ['','旬の海鮮丼',600,'サイド',true],['','うな丼',750,'サイド',true],
+  ['','牛さしとろらーめん',490,'サイド',true],['','7種の魚介 醤油らーめん',490,'サイド',true],
+  ['','胡麻香る担々麺',490,'サイド',true],['','きつねうどん',430,'サイド',true],
+  ['','えび天うどん',430,'サイド',true],['','鴨ねぎうどん',490,'サイド',true],
+  ['','純味噌汁',190,'サイド',true],['','本ズワイガニ茶碗蒸し',330,'サイド',true],
+  ['','特製茶碗蒸し',225,'サイド',true],['','えびブロッコリーサラダ',200,'サイド',true],
+  ['','フライドチキン',400,'サイド',true],['','くらポテト',420,'サイド',true],
+  ['','お出汁たこ焼き',240,'サイド',true],['','イベリコ豚コロッケ',150,'サイド',true],
+  ['','贅沢モンブランパフェ',530,'デザート',true],['','イタリアンティラミス',280,'デザート',true],
+  ['','ミルクレープ',280,'デザート',true],['','大学芋スティック',130,'デザート',true],
+  ['','京わらびもち',130,'デザート',true],['','北海道みるくシューアイス',150,'デザート',true],
+  ['','チョコケーキ',150,'デザート',true],['','チーズケーキ',150,'デザート',true],
+  ['','濃厚バニラアイス',150,'デザート',true],['','シャリコーラ',200,'デザート',true],
+].map((r,i)=>({id:1000+i,num:r[0],name:r[1],price:r[2],cat:r[3],enabled:r[4]}));
+
+const DEFAULT_SHOPS=[
+  {id:1,name:'サイゼリヤ',menu:SZ,updatable:true,updatedAt:'2026年2月20日'},
+  {id:2,name:'魚べい',menu:UB,updatable:false},
+  {id:3,name:'くら寿司',menu:KS,updatable:false},
+];
+
+const SAVE_KEY='roulette_v6';
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({shops:state.shops,activeShopId:state.activeShopId}));}catch(e){}}
+function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(d&&d.shops&&d.shops.length>0)return d;}catch(e){}return null;}
+
+let state={shops:DEFAULT_SHOPS.map(s=>({...s,menu:s.menu.map(m=>({...m}))})),activeShopId:1,spinning:false,angle:0,rCat:'すべて',mCat:'すべて'};
+let nextId=5000,nextShopId=20,editingId=null;
+
+const saved=loadSaved();
+if(saved){
+  saved.shops.forEach(sh=>{const def=DEFAULT_SHOPS.find(d=>d.id===sh.id);if(def)sh.updatable=def.updatable;});
+  state.shops=saved.shops;state.activeShopId=saved.activeShopId||1;
+  saved.shops.forEach(s=>s.menu.forEach(m=>{if(m.id>=nextId)nextId=m.id+1;}));
+}
+
+document.getElementById('promptText').textContent=UPDATE_PROMPT;
+
+const catColorMap=new Map();
+function getCatColor(cat){if(!catColorMap.has(cat)){catColorMap.set(cat,PALETTE[catColorMap.size%PALETTE.length]);}return catColorMap.get(cat);}
+function adjustColor(hex,amount){const n=parseInt(hex.replace('#',''),16);const r=Math.min(255,Math.max(0,(n>>16)+amount));const g=Math.min(255,Math.max(0,((n>>8)&0xff)+amount));const b=Math.min(255,Math.max(0,(n&0xff)+amount));return `rgb(${r},${g},${b})`;}
+
+const getShop=(id)=>state.shops.find(s=>s.id===(id||state.activeShopId))||state.shops[0];
+const getCats=(shop)=>['すべて',...new Set((shop||getShop()).menu.map(m=>m.cat).filter(Boolean))];
+const getFiltered=(cat,shop)=>{const s=shop||getShop();return s.menu.filter(m=>m.enabled&&(cat==='すべて'||m.cat===cat));};
+
+function copyPrompt(){
+  navigator.clipboard.writeText(UPDATE_PROMPT).then(()=>{
+    const btn=document.querySelector('.copy-btn');
+    btn.textContent='コピー済み✓';btn.style.background='var(--green)';btn.style.color='#fff';
+    setTimeout(()=>{btn.textContent='コピー';btn.style.background='';btn.style.color='';},2000);
+  }).catch(()=>{const ta=document.createElement('textarea');ta.value=UPDATE_PROMPT;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);});
+}
+
+function applyJson(){
+  const raw=document.getElementById('jsonPaste').value.trim();
+  const statusEl=document.getElementById('updateStatus');
+  if(!raw){statusEl.className='update-status err';statusEl.textContent='JSONを貼り付けてください';return;}
+  try{
+    const clean=raw.replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim();
+    const parsed=JSON.parse(clean);
+    if(!parsed.items||!Array.isArray(parsed.items)||!parsed.items.length)throw new Error('itemsが見つかりません');
+    const shop=state.shops.find(s=>s.id===1);
+    shop.menu=parsed.items.map(item=>({id:nextId++,num:item.num||'',name:item.name,price:Number(item.price)||0,cat:item.cat||'その他',enabled:item.enabled!==false}));
+    if(parsed.updatedAt)shop.updatedAt=parsed.updatedAt;
+    document.getElementById('updateDate').textContent=shop.updatedAt?`最終更新: ${shop.updatedAt}`:'';
+    save();
+    if(state.activeShopId===1){state.rCat='すべて';renderRCat();drawWheel();}
+    state.mCat='すべて';renderMCat();renderMenuList();
+    document.getElementById('jsonPaste').value='';
+    statusEl.className='update-status ok';
+    statusEl.textContent=`✓ ${parsed.items.length}品を更新しました`;
+  }catch(e){statusEl.className='update-status err';statusEl.textContent='エラー: JSONの形式が正しくありません';console.error(e);}
+}
+
+function showTab(t){
+  ['roulette','menu','shops'].forEach(n=>document.getElementById('tab-'+n).style.display=n===t?'':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['roulette','menu','shops'][i]===t));
+  populateSels();
+  if(t==='roulette'){renderRCat();drawWheel();}
+  if(t==='menu'){onMenuShopChange();}
+  if(t==='shops'){renderShopList();}
+}
+function populateSels(){
+  ['activeShop','menuShop'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    s.innerHTML=state.shops.map(sh=>`<option value="${sh.id}" ${sh.id===state.activeShopId?'selected':''}>${sh.name}</option>`).join('');
+  });
+}
+function onShopChange(){state.activeShopId=parseInt(document.getElementById('activeShop').value);state.rCat='すべて';document.getElementById('resultArea').innerHTML='';renderRCat();drawWheel();}
+function onMenuShopChange(){
+  state.activeShopId=parseInt(document.getElementById('menuShop').value);state.mCat='すべて';editingId=null;
+  const shop=getShop();
+  const sec=document.getElementById('updateSection');sec.style.display=shop.updatable?'block':'none';
+  if(shop.updatable)document.getElementById('updateDate').textContent=shop.updatedAt?`最終更新: ${shop.updatedAt}`:'';
+  renderMCat();renderMenuList();
+}
+function renderRCat(){
+  const cats=getCats();
+  document.getElementById('rCatFilter').innerHTML=cats.map(c=>`<button class="chip ${c===state.rCat?'on':''}" onclick="setRCat('${c}')">${c}</button>`).join('');
+  document.getElementById('countLabel').textContent=getFiltered(state.rCat).length+'品が対象';
+}
+function renderMCat(){
+  const cats=getCats();
+  document.getElementById('mCatFilter').innerHTML=cats.map(c=>`<button class="chip ${c===state.mCat?'on':''}" onclick="setMCat('${c}')">${c}</button>`).join('');
+}
+function setRCat(c){state.rCat=c;renderRCat();drawWheel();}
+function setMCat(c){state.mCat=c;editingId=null;renderMCat();renderMenuList();}
+
+function drawWheel(){
+  const canvas=document.getElementById('wheel');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=W/2-10;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,r+10,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,r+8,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  const items=getFiltered(state.rCat);
+  if(!items.length){
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='#e0e0e0';ctx.fill();
+    ctx.fillStyle='#999';ctx.font='bold 28px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('メニューなし',cx,cy);return;
+  }
+  const slice=(Math.PI*2)/items.length;
+  catColorMap.clear();
+  getCats().filter(c=>c!=='すべて').forEach((c,i)=>{catColorMap.set(c,PALETTE[i%PALETTE.length]);});
+  items.forEach((item,i)=>{
+    const start=state.angle+i*slice,end=start+slice;
+    const base=getCatColor(item.cat||'その他');
+    const catItems=items.filter(it=>it.cat===item.cat);
+    const color=adjustColor(base,catItems.indexOf(item)%2===0?0:-28);
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,end);ctx.closePath();
+    ctx.fillStyle=color;ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(start+slice/2);
+    const rawL=item.num?`[${item.num}] ${item.name}`:item.name;
+    const maxL=items.length>20?7:items.length>12?9:11;
+    const lbl=rawL.length>maxL?rawL.slice(0,maxL)+'…':rawL;
+    const fs=Math.max(13,Math.min(22,220/items.length));
+    ctx.font=`bold ${fs}px sans-serif`;ctx.textAlign='right';
+    ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;ctx.fillStyle='#fff';
+    ctx.fillText(lbl,r-16,fs*0.35);ctx.shadowBlur=0;ctx.restore();
+  });
+  const cg=ctx.createRadialGradient(cx-6,cy-6,0,cx,cy,34);
+  cg.addColorStop(0,'#fff');cg.addColorStop(1,'#e8e8e8');
+  ctx.beginPath();ctx.arc(cx,cy,34,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=2;ctx.stroke();
+}
+
+// ── スピン: 角速度ベースの物理シミュレーション ──
+// フェーズ1 (0〜P1): 加速  speed: 0 → maxV  (easeIn二乗)
+// フェーズ2 (P1〜P2): 巡航 speed: maxV一定
+// フェーズ3 (P2〜1 ): 減速 speed: maxV → 0  (摩擦: (1-t')^K で滑らかに0へ)
+// 各フェーズの速度は境界で連続 → 急変なし
+function spin(){
+  const items=getFiltered(state.rCat);
+  if(!items.length||state.spinning)return;
+  state.spinning=true;
+  document.getElementById('spinBtn').disabled=true;
+  document.getElementById('resultArea').innerHTML='';
+
+  // 停止位置を先に決定
+  const slice=(Math.PI*2)/items.length;
+  const targetIdx=Math.floor(Math.random()*items.length);
+  // 矢印（真上=π*1.5）にtargetIdxの中央が来る角度
+  const targetAngle=Math.PI*1.5-(targetIdx+0.5)*slice;
+
+  const TOTAL=6000; // 全体6秒
+  const P1=0.15;    // 加速終了 (15%)
+  const P2=0.35;    // 巡航終了・減速開始 (35%) → 残り65%がハラハラ減速
+  const K=4;        // 減速の鋭さ (大きいほどゆっくり止まる)
+
+  // 速度の積分係数: maxV * coeff = 1回転分の角度
+  // 加速: ∫0→P1 (t/P1)² dt = P1/3
+  // 巡航: P2 - P1
+  // 減速: ∫0→(1-P2) ((1-P2-t')/(1-P2))^K dt' = (1-P2)/(K+1)
+  const coeff = P1/3 + (P2-P1) + (1-P2)/(K+1);
+
+  // 何周するか（8〜14周）＋端数で targetAngle に着地
+  const rounds = 4 + Math.floor(Math.random()*3);
+  const extra = ((targetAngle - state.angle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+  const totalRot = rounds*(Math.PI*2) + extra;
+
+  // maxV = totalRot / (TOTAL * coeff)  ← 単位: rad/ms
+  const maxV = totalRot / (TOTAL * coeff);
+
+  const startAngle = state.angle;
+  const startTime = performance.now();
+
+  // 時刻tにおける累積回転角度を返す（totalRot で正規化したprogress×totalRot）
+  function getAngle(t){
+    let progress;
+    if(t < P1){
+      // 加速: ∫0→t (s/P1)² ds = t³/(3*P1²)
+      progress = (t*t*t) / (3*P1*P1);
+    } else if(t < P2){
+      // 巡航: 加速分 + 一定速
+      const accel = P1/3;
+      progress = accel + (t - P1);
+    } else {
+      // 減速: 加速分 + 巡航分 + 減速分
+      const accel = P1/3;
+      const cruise = P2 - P1;
+      const tp = t - P2;         // 減速フェーズ内の時間
+      const D = 1 - P2;          // 減速フェーズの長さ
+      // ∫0→tp ((D-s)/D)^K ds = D/(K+1) * [1 - ((D-tp)/D)^(K+1)]
+      const decel = (D/(K+1)) * (1 - Math.pow((D-tp)/D, K+1));
+      progress = accel + cruise + decel;
+    }
+    return startAngle + maxV * TOTAL * progress;
+  }
+
+  function frame(now){
+    const elapsed = Math.min(now - startTime, TOTAL);
+    const t = elapsed / TOTAL;
+    state.angle = getAngle(t);
+    drawWheel();
+    if(elapsed < TOTAL){
+      requestAnimationFrame(frame);
+    } else {
+      // 最終位置を正確にスナップ
+      state.angle = startAngle + totalRot;
+      state.spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      showResult(items, targetIdx);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function showResult(items,idx){
+  const item=items[idx];
+  document.getElementById('resultArea').innerHTML=`
+    <div class="result-card">
+      ${item.num?`<div class="result-num">${item.num}</div>`:''}
+      <div class="result-name">${item.name}</div>
+      <div class="result-cat">${item.cat||''}</div>
+      ${item.price?`<div class="result-price">¥${item.price.toLocaleString()}</div>`:''}
+    </div>`;
+}
+
+function renderMenuList(){
+  const shop=getShop();
+  const filtered=shop.menu.filter(m=>state.mCat==='すべて'||m.cat===state.mCat);
+  const el=document.getElementById('menuList');
+  if(!filtered.length){el.innerHTML='<div class="empty">このカテゴリにメニューがありません</div>';return;}
+  el.innerHTML=filtered.map(item=>{
+    if(item.id===editingId){
+      return `<div class="mi-edit">
+        <div class="mi-edit-row">
+          <input id="ei-num" value="${item.num||''}" placeholder="番号" style="width:64px"/>
+          <input id="ei-name" value="${item.name}" placeholder="メニュー名" style="flex:1"/>
+        </div>
+        <div class="mi-edit-row">
+          <input id="ei-price" value="${item.price||''}" placeholder="価格" style="width:80px"/>
+          <input id="ei-cat" value="${item.cat||''}" placeholder="カテゴリ" style="flex:1"/>
+        </div>
+        <div class="mi-edit-actions">
+          <button class="btn btn-sm" onclick="cancelEdit()">キャンセル</button>
+          <button class="btn btn-g btn-sm" onclick="saveEdit(${shop.id},${item.id})">保存</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="mi">
+      <input type="checkbox" ${item.enabled?'checked':''} onchange="toggleItem(${shop.id},${item.id})"/>
+      <span class="mi-num">${item.num||'—'}</span>
+      <span class="mi-name">${item.name}</span>
+      <span class="mi-cat">${item.cat||''}</span>
+      <span class="mi-price">${item.price?'¥'+item.price:''}</span>
+      <button class="icon-btn edit" onclick="startEdit(${item.id})">✏️</button>
+      <button class="icon-btn del" onclick="deleteItem(${shop.id},${item.id})">✕</button>
+    </div>`;
+  }).join('');
+  const tog=document.getElementById('toggleAll');
+  if(tog)tog.checked=filtered.length>0&&filtered.every(m=>m.enabled);
+  if(editingId){const e=el.querySelector('.mi-edit');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+
+function startEdit(id){editingId=id;renderMenuList();}
+function cancelEdit(){editingId=null;renderMenuList();}
+function saveEdit(shopId,itemId){
+  const shop=getShop(shopId);const item=shop.menu.find(m=>m.id===itemId);if(!item)return;
+  const name=document.getElementById('ei-name').value.trim();if(!name)return;
+  item.num=document.getElementById('ei-num').value.trim();item.name=name;
+  item.price=parseInt(document.getElementById('ei-price').value)||0;
+  item.cat=document.getElementById('ei-cat').value.trim()||item.cat;
+  editingId=null;save();if(shopId===state.activeShopId){renderRCat();drawWheel();}renderMCat();renderMenuList();
+}
+function toggleItem(shopId,itemId){const item=getShop(shopId).menu.find(m=>m.id===itemId);if(item)item.enabled=!item.enabled;save();if(shopId===state.activeShopId){renderRCat();drawWheel();}renderMenuList();}
+function deleteItem(shopId,itemId){if(!confirm('削除しますか？'))return;const shop=getShop(shopId);shop.menu=shop.menu.filter(m=>m.id!==itemId);if(editingId===itemId)editingId=null;save();if(shopId===state.activeShopId){renderRCat();drawWheel();}renderMCat();renderMenuList();}
+function toggleAllVisible(){const shop=getShop();const filtered=shop.menu.filter(m=>state.mCat==='すべて'||m.cat===state.mCat);const tog=document.getElementById('toggleAll');filtered.forEach(m=>m.enabled=tog.checked);save();renderRCat();drawWheel();renderMenuList();}
+function addMenuItem(){
+  const shopId=parseInt(document.getElementById('menuShop').value)||state.activeShopId;
+  const shop=getShop(shopId);
+  const num=document.getElementById('newNum').value.trim();
+  const name=document.getElementById('newName').value.trim();
+  const price=parseInt(document.getElementById('newPrice').value)||0;
+  if(!name)return;
+  const cat=state.mCat==='すべて'?'その他':state.mCat;
+  shop.menu.push({id:nextId++,num,name,price,cat,enabled:true});
+  ['newNum','newName','newPrice'].forEach(id=>document.getElementById(id).value='');
+  save();renderMCat();renderMenuList();if(shopId===state.activeShopId){renderRCat();drawWheel();}
+}
+function addShop(){const name=document.getElementById('newShopName').value.trim();if(!name)return;state.shops.push({id:nextShopId++,name,menu:[],updatable:false});document.getElementById('newShopName').value='';save();renderShopList();populateSels();}
+function deleteShop(id){if(!confirm('このお店を削除しますか？'))return;if(state.shops.length<=1)return;state.shops=state.shops.filter(s=>s.id!==id);if(state.activeShopId===id)state.activeShopId=state.shops[0].id;save();renderShopList();populateSels();drawWheel();}
+function renderShopList(){
+  document.getElementById('shopList').innerHTML=state.shops.map(s=>`
+    <div class="shop-item">
+      <span style="flex:1;font-weight:700;font-size:14px">${s.name}</span>
+      <span style="font-size:12px;color:var(--text3)">${s.menu.length}品</span>
+      ${state.shops.length>1?`<button class="btn btn-sm" style="color:var(--red);border-color:#fca5a5" onclick="deleteShop(${s.id})">削除</button>`:''}
+    </div>`).join('');
+}
+
+populateSels();renderRCat();drawWheel();
+</script>
+</body>
+</html>
