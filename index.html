@@ -14,35 +14,35 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:100dvh;}
-.app{max-width:480px;margin:0 auto;padding:0 0 80px;}
-.header{padding:16px 16px 0;text-align:center;}
-.header h1{font-size:20px;font-weight:700;color:var(--green);letter-spacing:0.1em;}
-.header .sub{font-size:11px;color:var(--text3);margin-top:2px;}
-.tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:100;}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:'Zen Maru Gothic',sans-serif;font-size:10px;padding:4px 0;transition:color 0.2s;}
+.app{max-width:480px;margin:0 auto;padding:0 0 64px;}
+.header{padding:10px 16px 0;text-align:center;}
+.header h1{font-size:18px;font-weight:700;color:var(--green);letter-spacing:0.1em;}
+.header .sub{font-size:10px;color:var(--text3);margin-top:1px;}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:100;}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:'Zen Maru Gothic',sans-serif;font-size:10px;padding:3px 0;transition:color 0.2s;}
 .tab.active{color:var(--green);}
-.tab-icon{font-size:22px;line-height:1;}
-.shop-bar{padding:12px 16px 8px;}
-.shop-bar select{width:100%;padding:12px 36px 12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:'Zen Maru Gothic',sans-serif;background:var(--card);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D9E75' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;box-shadow:var(--shadow);}
-.cat-scroll{padding:0 16px 8px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.tab-icon{font-size:20px;line-height:1;}
+.shop-bar{padding:8px 16px 4px;}
+.shop-bar select{width:100%;padding:10px 36px 10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:'Zen Maru Gothic',sans-serif;background:var(--card);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D9E75' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;box-shadow:var(--shadow);}
+.cat-scroll{padding:0 16px 6px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .cat-scroll::-webkit-scrollbar{display:none;}
-.chip{display:inline-block;padding:6px 14px;border-radius:99px;font-size:12px;font-family:'Zen Maru Gothic',sans-serif;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;margin-right:6px;transition:all 0.15s;}
+.chip{display:inline-block;padding:5px 12px;border-radius:99px;font-size:11px;font-family:'Zen Maru Gothic',sans-serif;border:1.5px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;margin-right:6px;transition:all 0.15s;}
 .chip.on{background:var(--green);color:#fff;border-color:var(--green);}
-.roulette-section{padding:8px 16px 16px;display:flex;flex-direction:column;align-items:center;}
-.count-label{font-size:12px;color:var(--text3);margin-bottom:10px;align-self:flex-start;}
-.wheel-wrap{position:relative;width:min(300px,85vw);height:min(300px,85vw);margin-bottom:20px;}
+.roulette-section{padding:4px 16px 8px;display:flex;flex-direction:column;align-items:center;}
+.count-label{font-size:11px;color:var(--text3);margin-bottom:6px;align-self:flex-start;}
+.wheel-wrap{position:relative;width:min(240px,72vw);height:min(240px,72vw);margin-bottom:12px;}
 .wheel-wrap canvas{width:100%;height:100%;display:block;}
-.pointer-wrap{position:absolute;top:-14px;left:50%;transform:translateX(-50%);z-index:10;}
-.spin-btn{width:min(120px,34vw);height:min(120px,34vw);border-radius:50%;background:var(--green);color:#fff;border:4px solid #fff;font-family:'Zen Maru Gothic',sans-serif;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 0 0 3px var(--green),0 8px 24px rgba(29,158,117,0.35);transition:transform 0.15s;letter-spacing:0.1em;}
+.pointer-wrap{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:10;}
+.spin-btn{width:min(96px,28vw);height:min(96px,28vw);border-radius:50%;background:var(--green);color:#fff;border:4px solid #fff;font-family:'Zen Maru Gothic',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 0 0 3px var(--green),0 8px 24px rgba(29,158,117,0.35);transition:transform 0.15s;letter-spacing:0.1em;}
 .spin-btn:hover{transform:scale(1.05);}
 .spin-btn:active{transform:scale(0.95);}
 .spin-btn:disabled{background:#ccc;box-shadow:0 0 0 3px #ccc;cursor:not-allowed;transform:none;}
-.result-card{width:100%;background:var(--card);border-radius:16px;padding:20px;margin-top:16px;box-shadow:var(--shadow);border:1.5px solid var(--green-l);animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+.result-card{width:100%;background:var(--card);border-radius:16px;padding:14px 16px;margin-top:10px;box-shadow:var(--shadow);border:1.5px solid var(--green-l);animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1);}
 @keyframes pop{from{transform:scale(0.8) translateY(10px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
-.result-num{font-size:56px;font-weight:700;color:var(--green);line-height:1;}
-.result-name{font-size:20px;font-weight:700;margin-top:6px;color:var(--text);}
-.result-cat{font-size:12px;color:var(--text3);margin-top:3px;}
-.result-price{font-size:15px;color:var(--text2);margin-top:6px;font-weight:500;}
+.result-num{font-size:40px;font-weight:700;color:var(--green);line-height:1;}
+.result-name{font-size:18px;font-weight:700;margin-top:4px;color:var(--text);}
+.result-cat{font-size:11px;color:var(--text3);margin-top:2px;}
+.result-price{font-size:14px;color:var(--text2);margin-top:4px;font-weight:500;}
 .manage-wrap{padding:0 16px;}
 .section{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
@@ -113,7 +113,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
       <div class="count-label" id="countLabel"></div>
       <div class="wheel-wrap">
         <div class="pointer-wrap">
-          <svg width="30" height="36" viewBox="0 0 30 36">
+          <svg width="26" height="30" viewBox="0 0 30 36">
             <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
             <polygon points="15,34 1,2 29,2" fill="#E24B4A" filter="url(#ds)"/>
             <polygon points="15,28 5,6 25,6" fill="#FF7070"/>
@@ -454,11 +454,6 @@ function drawWheel(){
   ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=2;ctx.stroke();
 }
 
-// ── スピン: 角速度ベースの物理シミュレーション ──
-// フェーズ1 (0〜P1): 加速  speed: 0 → maxV  (easeIn二乗)
-// フェーズ2 (P1〜P2): 巡航 speed: maxV一定
-// フェーズ3 (P2〜1 ): 減速 speed: maxV → 0  (摩擦: (1-t')^K で滑らかに0へ)
-// 各フェーズの速度は境界で連続 → 急変なし
 function spin(){
   const items=getFiltered(state.rCat);
   if(!items.length||state.spinning)return;
@@ -466,51 +461,36 @@ function spin(){
   document.getElementById('spinBtn').disabled=true;
   document.getElementById('resultArea').innerHTML='';
 
-  // 停止位置を先に決定
   const slice=(Math.PI*2)/items.length;
   const targetIdx=Math.floor(Math.random()*items.length);
-  // 矢印（真上=π*1.5）にtargetIdxの中央が来る角度
   const targetAngle=Math.PI*1.5-(targetIdx+0.5)*slice;
 
-  const TOTAL=6000; // 全体6秒
-  const P1=0.15;    // 加速終了 (15%)
-  const P2=0.35;    // 巡航終了・減速開始 (35%) → 残り65%がハラハラ減速
-  const K=4;        // 減速の鋭さ (大きいほどゆっくり止まる)
+  const TOTAL=6000;
+  const P1=0.15;
+  const P2=0.35;
+  const K=4;
 
-  // 速度の積分係数: maxV * coeff = 1回転分の角度
-  // 加速: ∫0→P1 (t/P1)² dt = P1/3
-  // 巡航: P2 - P1
-  // 減速: ∫0→(1-P2) ((1-P2-t')/(1-P2))^K dt' = (1-P2)/(K+1)
   const coeff = P1/3 + (P2-P1) + (1-P2)/(K+1);
-
-  // 何周するか（8〜14周）＋端数で targetAngle に着地
   const rounds = 4 + Math.floor(Math.random()*3);
   const extra = ((targetAngle - state.angle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
   const totalRot = rounds*(Math.PI*2) + extra;
-
-  // maxV = totalRot / (TOTAL * coeff)  ← 単位: rad/ms
   const maxV = totalRot / (TOTAL * coeff);
 
   const startAngle = state.angle;
   const startTime = performance.now();
 
-  // 時刻tにおける累積回転角度を返す（totalRot で正規化したprogress×totalRot）
   function getAngle(t){
     let progress;
     if(t < P1){
-      // 加速: ∫0→t (s/P1)² ds = t³/(3*P1²)
       progress = (t*t*t) / (3*P1*P1);
     } else if(t < P2){
-      // 巡航: 加速分 + 一定速
       const accel = P1/3;
       progress = accel + (t - P1);
     } else {
-      // 減速: 加速分 + 巡航分 + 減速分
       const accel = P1/3;
       const cruise = P2 - P1;
-      const tp = t - P2;         // 減速フェーズ内の時間
-      const D = 1 - P2;          // 減速フェーズの長さ
-      // ∫0→tp ((D-s)/D)^K ds = D/(K+1) * [1 - ((D-tp)/D)^(K+1)]
+      const tp = t - P2;
+      const D = 1 - P2;
       const decel = (D/(K+1)) * (1 - Math.pow((D-tp)/D, K+1));
       progress = accel + cruise + decel;
     }
@@ -525,7 +505,6 @@ function spin(){
     if(elapsed < TOTAL){
       requestAnimationFrame(frame);
     } else {
-      // 最終位置を正確にスナップ
       state.angle = startAngle + totalRot;
       state.spinning = false;
       document.getElementById('spinBtn').disabled = false;
