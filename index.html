@@ -467,7 +467,10 @@ function applyJson(){
   const statusEl=document.getElementById('updateStatus');
   if(!raw){statusEl.className='update-status err';statusEl.textContent='JSONを貼り付けてください';return;}
   try{
-    const clean=raw.replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim().replace(/[""]/g,'"').replace(/['']/g,"'");
+    const clean=raw
+      .replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim()
+      .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\uFF02\u300C\u300D\u300E\u300F\u「\u」]/g,'"')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035\uFF07]/g,"'");
     const parsed=JSON.parse(clean);
     if(!parsed.items||!Array.isArray(parsed.items)||!parsed.items.length)throw new Error('itemsが見つかりません');
     // id===1で見つからない場合は現在選択中のshopを対象にする
