@@ -470,17 +470,19 @@ function applyJson(){
     const clean=raw.replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim();
     const parsed=JSON.parse(clean);
     if(!parsed.items||!Array.isArray(parsed.items)||!parsed.items.length)throw new Error('itemsが見つかりません');
-    const shop=state.shops.find(s=>s.id===1);
+    // id===1で見つからない場合は現在選択中のshopを対象にする
+    const shop=state.shops.find(s=>s.id===1)||state.shops.find(s=>s.updatable)||getShop();
+    if(!shop){statusEl.className='update-status err';statusEl.textContent='エラー: 対象のお店が見つかりません';return;}
     shop.menu=parsed.items.map(item=>({id:nextId++,num:item.num||'',name:item.name,price:Number(item.price)||0,cat:item.cat||'その他',enabled:item.enabled!==false}));
     if(parsed.updatedAt)shop.updatedAt=parsed.updatedAt;
     document.getElementById('updateDate').textContent=shop.updatedAt?`最終更新: ${shop.updatedAt}`:'';
     save();
-    if(state.activeShopId===1){state.rCat='すべて';renderRCat();drawWheel();}
+    if(state.activeShopId===shop.id){state.rCat='すべて';renderRCat();drawWheel();}
     state.mCat='すべて';renderMCat();renderMenuList();
     document.getElementById('jsonPaste').value='';
     statusEl.className='update-status ok';
     statusEl.textContent=`✓ ${parsed.items.length}品を更新しました`;
-  }catch(e){statusEl.className='update-status err';statusEl.textContent='エラー: JSONの形式が正しくありません';console.error(e);}
+  }catch(e){statusEl.className='update-status err';statusEl.textContent=`エラー: ${e.message}`;console.error(e);}
 }
 
 function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawerOverlay').classList.add('open');}
