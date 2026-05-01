@@ -14,18 +14,29 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:100dvh;}
-.app{max-width:480px;margin:0 auto;padding:0 0 64px;}
-.header{padding:10px 16px 0;text-align:center;}
-.header h1{font-size:18px;font-weight:700;color:var(--green);letter-spacing:0.1em;}
-.header .sub{font-size:10px;color:var(--text3);margin-top:1px;}
-.sync-status{font-size:10px;margin-top:2px;}
+.app{max-width:480px;margin:0 auto;padding:0;}
+.header{padding:10px 16px 0;display:flex;align-items:center;gap:10px;}
+.header h1{font-size:18px;font-weight:700;color:var(--green);letter-spacing:0.1em;flex:1;text-align:center;}
+.sync-status{font-size:10px;margin-top:2px;text-align:center;}
 .sync-status.ok{color:var(--green);}
 .sync-status.err{color:var(--red);}
 .sync-status.loading{color:var(--text3);}
-.tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:100;}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:'Zen Maru Gothic',sans-serif;font-size:10px;padding:3px 0;transition:color 0.2s;}
-.tab.active{color:var(--green);}
-.tab-icon{font-size:20px;line-height:1;}
+/* ハンバーガーボタン */
+.hamburger{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+.hamburger span{display:block;width:22px;height:2px;background:var(--green);border-radius:2px;transition:all 0.25s;}
+/* オーバーレイ */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.drawer-overlay.open{opacity:1;pointer-events:auto;}
+/* ドロワー */
+.drawer{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--card);z-index:201;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);display:flex;flex-direction:column;}
+.drawer.open{transform:translateX(0);}
+.drawer-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+.drawer-title{font-size:16px;font-weight:700;color:var(--green);}
+.drawer-nav{padding:12px 0;}
+.drawer-item{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;border:none;background:none;width:100%;font-family:'Zen Maru Gothic',sans-serif;font-size:15px;color:var(--text2);transition:background 0.15s;}
+.drawer-item:hover{background:var(--bg);}
+.drawer-item.active{color:var(--green);background:var(--green-l);}
+.drawer-item-icon{font-size:20px;}
 .shop-bar{padding:8px 16px 4px;}
 .shop-bar select{width:100%;padding:10px 36px 10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-family:'Zen Maru Gothic',sans-serif;background:var(--card);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231D9E75' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;box-shadow:var(--shadow);}
 .cat-scroll{padding:0 16px 6px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
@@ -104,12 +115,29 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
 </style>
 </head>
 <body>
+<!-- ドロワーオーバーレイ -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<!-- ドロワー -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">🍽 メニュー</div>
+  </div>
+  <nav class="drawer-nav">
+    <button class="drawer-item active" id="nav-roulette" onclick="showTab('roulette')"><span class="drawer-item-icon">🎰</span>ルーレット</button>
+    <button class="drawer-item" id="nav-menu" onclick="showTab('menu')"><span class="drawer-item-icon">📋</span>メニュー</button>
+    <button class="drawer-item" id="nav-shops" onclick="showTab('shops')"><span class="drawer-item-icon">🏪</span>お店</button>
+  </nav>
+</div>
+
 <div class="app">
   <div class="header">
+    <button class="hamburger" onclick="openDrawer()" aria-label="メニュー">
+      <span></span><span></span><span></span>
+    </button>
     <h1>🍽 ごはんルーレット</h1>
-    <div class="sub">今日の一品をまわして決めよう</div>
-    <div class="sync-status loading" id="syncStatus">🔄 同期中...</div>
+    <div style="width:34px"></div><!-- 右側スペーサー -->
   </div>
+  <div class="sync-status loading" id="syncStatus" style="text-align:center;font-size:10px;padding:2px 0;">🔄 同期中...</div>
 
   <div id="tab-roulette">
     <div class="shop-bar"><select id="activeShop" onchange="onShopChange()"></select></div>
@@ -182,11 +210,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
     </div>
   </div>
 
-  <nav class="tab-bar">
-    <button class="tab active" onclick="showTab('roulette')"><span class="tab-icon">🎰</span>ルーレット</button>
-    <button class="tab" onclick="showTab('menu')"><span class="tab-icon">📋</span>メニュー</button>
-    <button class="tab" onclick="showTab('shops')"><span class="tab-icon">🏪</span>お店</button>
-  </nav>
+
 </div>
 
 <!-- Firebase SDK -->
@@ -459,9 +483,12 @@ function applyJson(){
   }catch(e){statusEl.className='update-status err';statusEl.textContent='エラー: JSONの形式が正しくありません';console.error(e);}
 }
 
+function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawerOverlay').classList.add('open');}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('drawerOverlay').classList.remove('open');}
 function showTab(t){
+  closeDrawer();
   ['roulette','menu','shops'].forEach(n=>document.getElementById('tab-'+n).style.display=n===t?'':'none');
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['roulette','menu','shops'][i]===t));
+  ['roulette','menu','shops'].forEach(n=>{const el=document.getElementById('nav-'+n);if(el)el.classList.toggle('active',n===t);});
   populateSels();
   if(t==='roulette'){renderRCat();drawWheel();}
   if(t==='menu'){onMenuShopChange();}
