@@ -18,6 +18,10 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
 .header{padding:10px 16px 0;text-align:center;}
 .header h1{font-size:18px;font-weight:700;color:var(--green);letter-spacing:0.1em;}
 .header .sub{font-size:10px;color:var(--text3);margin-top:1px;}
+.sync-status{font-size:10px;margin-top:2px;}
+.sync-status.ok{color:var(--green);}
+.sync-status.err{color:var(--red);}
+.sync-status.loading{color:var(--text3);}
 .tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:100;}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:'Zen Maru Gothic',sans-serif;font-size:10px;padding:3px 0;transition:color 0.2s;}
 .tab.active{color:var(--green);}
@@ -104,6 +108,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
   <div class="header">
     <h1>🍽 ごはんルーレット</h1>
     <div class="sub">今日の一品をまわして決めよう</div>
+    <div class="sync-status loading" id="syncStatus">🔄 同期中...</div>
   </div>
 
   <div id="tab-roulette">
@@ -183,6 +188,84 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
     <button class="tab" onclick="showTab('shops')"><span class="tab-icon">🏪</span>お店</button>
   </nav>
 </div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBO9hsGP2oEnJ9xU28IqyGX5l1cKI-owxk",
+  authDomain: "gohan-roulette-shikomaru450.firebaseapp.com",
+  databaseURL: "https://gohan-roulette-shikomaru450-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "gohan-roulette-shikomaru450",
+  storageBucket: "gohan-roulette-shikomaru450.firebasestorage.app",
+  messagingSenderId: "780366811198",
+  appId: "1:780366811198:web:7907ce6eeb1aa5fe27016f",
+  measurementId: "G-CR78ZWJQM0"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Firebaseへの保存（throttle付き）
+let saveTimer = null;
+window.fbSave = function(data) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    set(ref(db, 'data'), data)
+      .then(() => {
+        const el = document.getElementById('syncStatus');
+        el.className = 'sync-status ok';
+        el.textContent = '☁️ 同期済み';
+      })
+      .catch(e => {
+        const el = document.getElementById('syncStatus');
+        el.className = 'sync-status err';
+        el.textContent = '⚠️ 同期エラー';
+        console.error(e);
+      });
+  }, 800);
+};
+
+// Firebaseからリアルタイム受信
+onValue(ref(db, 'data'), (snapshot) => {
+  const el = document.getElementById('syncStatus');
+  const val = snapshot.val();
+  if (val && val.shops && val.shops.length > 0) {
+    // 外部からの変更を反映（自分の操作中は無視しない）
+    val.shops.forEach(sh => {
+      const def = DEFAULT_SHOPS.find(d => d.id === sh.id);
+      if (def) sh.updatable = def.updatable;
+    });
+    state.shops = val.shops;
+    if (val.activeShopId) state.activeShopId = val.activeShopId;
+    el.className = 'sync-status ok';
+    el.textContent = '☁️ 同期済み';
+    // UI更新
+    populateSels();
+    renderRCat();
+    drawWheel();
+    if (document.getElementById('tab-menu').style.display !== 'none') {
+      renderMCat();
+      renderMenuList();
+    }
+    if (document.getElementById('tab-shops').style.display !== 'none') {
+      renderShopList();
+    }
+  } else {
+    // Firebaseが空 → デフォルトデータをアップロード
+    el.className = 'sync-status loading';
+    el.textContent = '🔄 初期データをアップロード中...';
+    window.fbSave({ shops: state.shops, activeShopId: state.activeShopId });
+  }
+}, (error) => {
+  const el = document.getElementById('syncStatus');
+  el.className = 'sync-status err';
+  el.textContent = '⚠️ 接続エラー';
+  console.error(error);
+});
+</script>
 
 <script>
 const PALETTE=['#E8534A','#F0874A','#F5C842','#7DC95E','#3DB87A','#3AB8B8','#4A90D9','#7B68EE','#C85EAB','#E84A7A','#5BBFAD','#F5A623','#8BC34A','#29B6F6','#AB47BC','#FF7043'];
@@ -329,19 +412,13 @@ const DEFAULT_SHOPS=[
   {id:3,name:'くら寿司',menu:KS,updatable:false},
 ];
 
-const SAVE_KEY='roulette_v6';
-function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({shops:state.shops,activeShopId:state.activeShopId}));}catch(e){}}
-function loadSaved(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(d&&d.shops&&d.shops.length>0)return d;}catch(e){}return null;}
+// Firebaseへ保存（localStorageは使わない）
+function save(){
+  if(window.fbSave) window.fbSave({shops:state.shops, activeShopId:state.activeShopId});
+}
 
 let state={shops:DEFAULT_SHOPS.map(s=>({...s,menu:s.menu.map(m=>({...m}))})),activeShopId:1,spinning:false,angle:0,rCat:'すべて',mCat:'すべて'};
 let nextId=5000,nextShopId=20,editingId=null;
-
-const saved=loadSaved();
-if(saved){
-  saved.shops.forEach(sh=>{const def=DEFAULT_SHOPS.find(d=>d.id===sh.id);if(def)sh.updatable=def.updatable;});
-  state.shops=saved.shops;state.activeShopId=saved.activeShopId||1;
-  saved.shops.forEach(s=>s.menu.forEach(m=>{if(m.id>=nextId)nextId=m.id+1;}));
-}
 
 document.getElementById('promptText').textContent=UPDATE_PROMPT;
 
