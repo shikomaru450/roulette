@@ -664,6 +664,7 @@ populateSels();renderRCat();drawWheel();
   window.fbSave = function(data) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      _fbIgnoreNext = true;
       db.ref('data').set(data)
         .then(() => {
           const el = document.getElementById('syncStatus');
@@ -680,16 +681,28 @@ populateSels();renderRCat();drawWheel();
   };
 
   let _fbFirstLoad = true;
+  let _fbIgnoreNext = false; // 自分のsave直後の受信は無視する
+
   db.ref('data').on('value', (snapshot) => {
     const el = document.getElementById('syncStatus');
     const val = snapshot.val();
+
     if (val && val.shops && val.shops.length > 0) {
+      // 自分のsave直後の折り返し受信は state を上書きしない
+      if (_fbIgnoreNext) {
+        _fbIgnoreNext = false;
+        el.className = 'sync-status ok';
+        el.textContent = '☁️ 同期済み';
+        return;
+      }
       val.shops.forEach(sh => {
         const def = DEFAULT_SHOPS.find(d => d.id === sh.id);
         if (def) sh.updatable = def.updatable;
       });
+      const prevActiveShopId = state.activeShopId;
       state.shops = val.shops;
-      if (val.activeShopId) state.activeShopId = val.activeShopId;
+      // activeShopIdは自分が操作中のものを優先する
+      state.activeShopId = prevActiveShopId;
       el.className = 'sync-status ok';
       el.textContent = '☁️ 同期済み';
       populateSels(); renderRCat(); drawWheel();
