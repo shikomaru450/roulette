@@ -213,83 +213,6 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
 
 </div>
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBO9hsGP2oEnJ9xU28IqyGX5l1cKI-owxk",
-  authDomain: "gohan-roulette-shikomaru450.firebaseapp.com",
-  databaseURL: "https://gohan-roulette-shikomaru450-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "gohan-roulette-shikomaru450",
-  storageBucket: "gohan-roulette-shikomaru450.firebasestorage.app",
-  messagingSenderId: "780366811198",
-  appId: "1:780366811198:web:7907ce6eeb1aa5fe27016f",
-  measurementId: "G-CR78ZWJQM0"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// Firebaseへの保存（throttle付き）
-let saveTimer = null;
-window.fbSave = function(data) {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    set(ref(db, 'data'), data)
-      .then(() => {
-        const el = document.getElementById('syncStatus');
-        el.className = 'sync-status ok';
-        el.textContent = '☁️ 同期済み';
-      })
-      .catch(e => {
-        const el = document.getElementById('syncStatus');
-        el.className = 'sync-status err';
-        el.textContent = '⚠️ 同期エラー';
-        console.error(e);
-      });
-  }, 800);
-};
-
-// Firebaseからリアルタイム受信
-onValue(ref(db, 'data'), (snapshot) => {
-  const el = document.getElementById('syncStatus');
-  const val = snapshot.val();
-  if (val && val.shops && val.shops.length > 0) {
-    // 外部からの変更を反映（自分の操作中は無視しない）
-    val.shops.forEach(sh => {
-      const def = DEFAULT_SHOPS.find(d => d.id === sh.id);
-      if (def) sh.updatable = def.updatable;
-    });
-    state.shops = val.shops;
-    if (val.activeShopId) state.activeShopId = val.activeShopId;
-    el.className = 'sync-status ok';
-    el.textContent = '☁️ 同期済み';
-    // UI更新
-    populateSels();
-    renderRCat();
-    drawWheel();
-    if (document.getElementById('tab-menu').style.display !== 'none') {
-      renderMCat();
-      renderMenuList();
-    }
-    if (document.getElementById('tab-shops').style.display !== 'none') {
-      renderShopList();
-    }
-  } else {
-    // Firebaseが空 → デフォルトデータをアップロード
-    el.className = 'sync-status loading';
-    el.textContent = '🔄 初期データをアップロード中...';
-    window.fbSave({ shops: state.shops, activeShopId: state.activeShopId });
-  }
-}, (error) => {
-  const el = document.getElementById('syncStatus');
-  el.className = 'sync-status err';
-  el.textContent = '⚠️ 接続エラー';
-  console.error(error);
-});
-</script>
 
 <script>
 const PALETTE=['#E8534A','#F0874A','#F5C842','#7DC95E','#3DB87A','#3AB8B8','#4A90D9','#7B68EE','#C85EAB','#E84A7A','#5BBFAD','#F5A623','#8BC34A','#29B6F6','#AB47BC','#FF7043'];
@@ -485,7 +408,18 @@ function applyJson(){
     document.getElementById('jsonPaste').value='';
     statusEl.className='update-status ok';
     statusEl.textContent=`✓ ${parsed.items.length}品を更新しました`;
-  }catch(e){statusEl.className='update-status err';statusEl.textContent=`エラー: ${e.message}`;console.error(e);}
+  }catch(e){
+    // エラー箇所を特定するため位置情報を抽出
+    const pos = (e.message.match(/position (\d+)/)||e.message.match(/(\d+)/))?.[1];
+    let hint = '';
+    if(pos){
+      const p=parseInt(pos);
+      hint = ' → 付近:「'+(clean||raw).substring(Math.max(0,p-10),p+10)+'」';
+    }
+    statusEl.className='update-status err';
+    statusEl.textContent=`エラー: ${e.message}${hint}`;
+    console.error(e, '\n---RAW---\n', raw, '\n---CLEAN---\n', clean);
+  }
 }
 
 function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawerOverlay').classList.add('open');}
@@ -696,7 +630,7 @@ function addMenuItem(){
   ['newNum','newName','newPrice'].forEach(id=>document.getElementById(id).value='');
   save();renderMCat();renderMenuList();if(shopId===state.activeShopId){renderRCat();drawWheel();}
 }
-function addShop(){const name=document.getElementById('newShopName').value.trim();if(!name)return;state.shops.push({id:nextShopId++,name,menu:[],updatable:false});document.getElementById('newShopName').value='';save();renderShopList();populateSels();}
+function addShop(){const name=document.getElementById('newShopName').value.trim();if(!name)return;const newShop={id:nextShopId++,name,menu:[],updatable:false};state.shops.push(newShop);state.activeShopId=newShop.id;document.getElementById('newShopName').value='';save();renderShopList();populateSels();showTab('menu');}
 function deleteShop(id){if(!confirm('このお店を削除しますか？'))return;if(state.shops.length<=1)return;state.shops=state.shops.filter(s=>s.id!==id);if(state.activeShopId===id)state.activeShopId=state.shops[0].id;save();renderShopList();populateSels();drawWheel();}
 function renderShopList(){
   document.getElementById('shopList').innerHTML=state.shops.map(s=>`
@@ -708,6 +642,76 @@ function renderShopList(){
 }
 
 populateSels();renderRCat();drawWheel();
+</script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+  const firebaseConfig = {
+    apiKey: "AIzaSyBO9hsGP2oEnJ9xU28IqyGX5l1cKI-owxk",
+    authDomain: "gohan-roulette-shikomaru450.firebaseapp.com",
+    databaseURL: "https://gohan-roulette-shikomaru450-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "gohan-roulette-shikomaru450",
+    storageBucket: "gohan-roulette-shikomaru450.firebasestorage.app",
+    messagingSenderId: "780366811198",
+    appId: "1:780366811198:web:7907ce6eeb1aa5fe27016f"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let saveTimer = null;
+  window.fbSave = function(data) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      db.ref('data').set(data)
+        .then(() => {
+          const el = document.getElementById('syncStatus');
+          el.className = 'sync-status ok';
+          el.textContent = '☁️ 同期済み';
+        })
+        .catch(e => {
+          const el = document.getElementById('syncStatus');
+          el.className = 'sync-status err';
+          el.textContent = '⚠️ 同期エラー';
+          console.error(e);
+        });
+    }, 800);
+  };
+
+  let _fbFirstLoad = true;
+  db.ref('data').on('value', (snapshot) => {
+    const el = document.getElementById('syncStatus');
+    const val = snapshot.val();
+    if (val && val.shops && val.shops.length > 0) {
+      val.shops.forEach(sh => {
+        const def = DEFAULT_SHOPS.find(d => d.id === sh.id);
+        if (def) sh.updatable = def.updatable;
+      });
+      state.shops = val.shops;
+      if (val.activeShopId) state.activeShopId = val.activeShopId;
+      el.className = 'sync-status ok';
+      el.textContent = '☁️ 同期済み';
+      populateSels(); renderRCat(); drawWheel();
+      if (document.getElementById('tab-menu').style.display !== 'none') {
+        renderMCat(); renderMenuList();
+      }
+      if (document.getElementById('tab-shops').style.display !== 'none') {
+        renderShopList();
+      }
+    } else if (_fbFirstLoad) {
+      el.className = 'sync-status loading';
+      el.textContent = '🔄 初期データをアップロード中...';
+      window.fbSave({ shops: state.shops, activeShopId: state.activeShopId });
+    }
+    _fbFirstLoad = false;
+  }, (error) => {
+    const el = document.getElementById('syncStatus');
+    el.className = 'sync-status err';
+    el.textContent = '⚠️ 接続エラー';
+    console.error(error);
+  });
+})();
 </script>
 </body>
 </html>
