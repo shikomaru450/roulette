@@ -163,6 +163,21 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
     <div class="shop-bar"><select id="menuShop" onchange="onMenuShopChange()"></select></div>
     <div class="cat-scroll" id="mCatFilter"></div>
     <div class="manage-wrap">
+      <div class="update-section" id="updateSection" style="display:none">
+        <div class="update-header">
+          <span class="update-title">🔄 メニューを最新版に更新</span>
+          <span class="update-date" id="updateDate"></span>
+        </div>
+        <div class="step"><div class="step-num">1</div><div class="step-text">下のプロンプトをコピーして <a href="https://claude.ai" target="_blank">Claude.ai</a> に送信</div></div>
+        <div class="prompt-box"><pre id="promptText"></pre><button class="copy-btn" onclick="copyPrompt()">コピー</button></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Claudeが返したJSONをコピー</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">下に貼り付けて「更新」を押す</div></div>
+        <textarea class="paste-area" id="jsonPaste" placeholder='{"updatedAt":"...","items":[...]} をここに貼り付け'></textarea>
+        <div class="update-actions">
+          <div class="update-status" id="updateStatus"></div>
+          <button class="btn btn-g btn-sm" onclick="applyJson()">更新</button>
+        </div>
+      </div>
       <div class="section">
         <div class="sec-head">
           <span class="sec-title">メニュー一覧</span>
