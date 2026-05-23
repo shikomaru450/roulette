@@ -163,21 +163,6 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:10
     <div class="shop-bar"><select id="menuShop" onchange="onMenuShopChange()"></select></div>
     <div class="cat-scroll" id="mCatFilter"></div>
     <div class="manage-wrap">
-      <div class="update-section" id="updateSection" style="display:none">
-        <div class="update-header">
-          <span class="update-title">🔄 メニューを最新版に更新</span>
-          <span class="update-date" id="updateDate"></span>
-        </div>
-        <div class="step"><div class="step-num">1</div><div class="step-text">下のプロンプトをコピーして <a href="https://claude.ai" target="_blank">Claude.ai</a> に送信</div></div>
-        <div class="prompt-box"><pre id="promptText"></pre><button class="copy-btn" onclick="copyPrompt()">コピー</button></div>
-        <div class="step"><div class="step-num">2</div><div class="step-text">Claudeが返したJSONをコピー</div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-text">下に貼り付けて「更新」を押す</div></div>
-        <textarea class="paste-area" id="jsonPaste" placeholder='{"updatedAt":"...","items":[...]} をここに貼り付け'></textarea>
-        <div class="update-actions">
-          <div class="update-status" id="updateStatus"></div>
-          <button class="btn btn-g btn-sm" onclick="applyJson()">更新</button>
-        </div>
-      </div>
       <div class="section">
         <div class="sec-head">
           <span class="sec-title">メニュー一覧</span>
@@ -516,7 +501,7 @@ function renderShopList(){
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 (function(){
-  const firebaseConfig = {
+  firebase.initializeApp({
     apiKey: "AIzaSyBO9hsGP2oEnJ9xU28IqyGX5l1cKI-owxk",
     authDomain: "gohan-roulette-shikomaru450.firebaseapp.com",
     databaseURL: "https://gohan-roulette-shikomaru450-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -524,56 +509,63 @@ function renderShopList(){
     storageBucket: "gohan-roulette-shikomaru450.firebasestorage.app",
     messagingSenderId: "780366811198",
     appId: "1:780366811198:web:7907ce6eeb1aa5fe27016f"
-  };
-  firebase.initializeApp(firebaseConfig);
+  });
   const db = firebase.database();
+  const el = () => document.getElementById('syncStatus');
 
-  // 保存：操作のたびにFirebaseへ書き込む
+  // 保存（操作のたびに呼ばれる）
   let saveTimer = null;
+  let isSaving = false;
   window.fbSave = function(data) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      isSaving = true;
       db.ref('data').set(data)
         .then(() => {
-          const el = document.getElementById('syncStatus');
-          el.className = 'sync-status ok';
-          el.textContent = '☁️ 同期済み';
+          isSaving = false;
+          el().className = 'sync-status ok';
+          el().textContent = '☁️ 同期済み';
         })
         .catch(e => {
-          const el = document.getElementById('syncStatus');
-          el.className = 'sync-status err';
-          el.textContent = '⚠️ 同期エラー';
-          console.error(e);
+          isSaving = false;
+          el().className = 'sync-status err';
+          el().textContent = '⚠️ 保存エラー';
+          console.error('save error:', e);
         });
     }, 800);
   };
 
-  // 読み込み：起動時に1回だけ取得（リアルタイム同期しない）
-  const el = document.getElementById('syncStatus');
+  // 起動時に1回だけ読み込む
+  el().className = 'sync-status loading';
+  el().textContent = '🔄 同期中...';
+
   db.ref('data').once('value')
     .then(snapshot => {
       const val = snapshot.val();
       if (val && val.shops && val.shops.length > 0) {
+        // Firebaseのデータを使う
         val.shops.forEach(sh => {
-          const def = DEFAULT_SHOPS.find(d => d.id === sh.id);
-          if (def) sh.updatable = def.updatable;
+          if (!sh.menu) sh.menu = [];
+          const def = [{id:1,updatable:true},{id:2,updatable:false},{id:3,updatable:false}];
+          const d = def.find(d => d.id === sh.id);
+          if (d) sh.updatable = d.updatable;
         });
         state.shops = val.shops;
-        if (val.activeShopId) state.activeShopId = val.activeShopId;
-        el.className = 'sync-status ok';
-        el.textContent = '☁️ 同期済み';
-      } else {
-        // Firebaseが空 → そのまま空で表示
-        el.className = 'sync-status ok';
-        el.textContent = '☁️ 接続済み（データなし）';
+        state.activeShopId = val.activeShopId || val.shops[0].id;
+        // nextId/nextShopIdをFirebaseのデータに合わせて更新
+        val.shops.forEach(s => {
+          if(s.id >= nextShopId) nextShopId = s.id + 1;
+          (s.menu||[]).forEach(m => { if(m.id >= nextId) nextId = m.id + 1; });
+        });
       }
+      el().className = 'sync-status ok';
+      el().textContent = '☁️ 同期済み';
       populateSels(); renderRCat(); drawWheel();
     })
     .catch(e => {
-      console.error('Firebase error:', e.message, e.code, e);
-      // Firebase接続失敗時はデフォルトデータでそのまま動作する
-      el.className = 'sync-status err';
-      el.textContent = '⚠️ エラー:' + (e.message||e.code||'不明');
+      console.error('load error:', e);
+      el().className = 'sync-status err';
+      el().textContent = '⚠️ 接続エラー（オフライン）';
       populateSels(); renderRCat(); drawWheel();
     });
 })();
