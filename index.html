@@ -231,9 +231,8 @@ const DEFAULT_SHOPS=[];
 function save(){
   if(window.fbSave) window.fbSave({shops:state.shops, activeShopId:state.activeShopId});
 }
-
-let state={shops:[],activeShopId:null,spinning:false,angle:0,rCat:'すべて',mCat:'すべて'};
-let nextId=5000,nextShopId=20,editingId=null;
+let state={shops:[],activeShopId:null,spinning:false,stopping:false,angle:0,rCat:'すべて',mCat:'すべて'};
+let nextId=5000,nextShopId=20,editingId=null,editingShopId=null;
 
 document.getElementById('promptText').textContent=UPDATE_PROMPT;
 
@@ -257,8 +256,9 @@ function applyJson(){
   const raw=document.getElementById('jsonPaste').value.trim();
   const statusEl=document.getElementById('updateStatus');
   if(!raw){statusEl.className='update-status err';statusEl.textContent='JSONを貼り付けてください';return;}
+  let clean=raw;
   try{
-    const clean=raw
+    clean=raw
       .replace(/^```[\w]*\n?/,'').replace(/\n?```$/,'').trim()
       .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\uFF02\u300C\u300D\u300E\u300F\u「\u」]/g,'"')
       .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035\uFF07]/g,"'");
@@ -324,7 +324,7 @@ function renderMCat(){
   const cats=getCats();
   document.getElementById('mCatFilter').innerHTML=cats.map(c=>`<button class="chip ${c===state.mCat?'on':''}" onclick="setMCat('${c}')">${c}</button>`).join('');
 }
-function setRCat(c){state.rCat=c;renderRCat();drawWheel();}
+function setRCat(c){if(state.spinning)return;state.rCat=c;renderRCat();drawWheel();}
 function setMCat(c){state.mCat=c;editingId=null;renderMCat();renderMenuList();}
 
 function drawWheel(){
@@ -379,6 +379,7 @@ function spin(){
   state.stopping = false;
   const btn = document.getElementById('spinBtn');
   btn.textContent = 'とめる';
+  document.getElementById('activeShop').disabled = true;
   document.getElementById('resultArea').innerHTML = '';
 
   const MAX_V = 0.012;   // 最高速度(約1.9回転/秒)
@@ -430,6 +431,7 @@ function finishSpin(){
   state.stopping = false;
   btn.disabled = false;
   btn.textContent = 'まわす';
+  document.getElementById('activeShop').disabled = false;
   if(!items.length) return;
 
   // ポインタ(上 = 1.5π)の真下にあるメニューを判定
@@ -514,14 +516,57 @@ function addMenuItem(){
   save();renderMCat();renderMenuList();if(shopId===state.activeShopId){renderRCat();drawWheel();}
 }
 function addShop(){const name=document.getElementById('newShopName').value.trim();if(!name)return;const newShop={id:nextShopId++,name,menu:[],updatable:false};state.shops.push(newShop);state.activeShopId=newShop.id;document.getElementById('newShopName').value='';save();renderShopList();populateSels();showTab('menu');}
-function deleteShop(id){if(!confirm('このお店を削除しますか？'))return;if(state.shops.length<=1)return;state.shops=state.shops.filter(s=>s.id!==id);if(state.activeShopId===id)state.activeShopId=state.shops[0].id;save();renderShopList();populateSels();drawWheel();}
+function deleteShop(id){
+  if(state.shops.length<=1)return;
+  if(!confirm('このお店を削除しますか？'))return;
+  state.shops=state.shops.filter(s=>s.id!==id);
+  if(state.activeShopId===id)state.activeShopId=state.shops[0].id;
+  if(editingShopId===id)editingShopId=null;
+  save();renderShopList();populateSels();drawWheel();
+}
 function renderShopList(){
-  document.getElementById('shopList').innerHTML=state.shops.map(s=>`
-    <div class="shop-item">
+  document.getElementById('shopList').innerHTML=state.shops.map((s,i)=>{
+    if(s.id===editingShopId){
+      return `<div class="shop-item">
+        <input id="es-name" value="${s.name.replace(/"/g,'&quot;')}" style="flex:1;padding:8px 10px;border:1.5px solid var(--green);border-radius:8px;font-size:14px;font-family:'Zen Maru Gothic',sans-serif;outline:none;"/>
+        <button class="btn btn-sm" onclick="cancelShopEdit()">キャンセル</button>
+        <button class="btn btn-g btn-sm" onclick="saveShopEdit(${s.id})">保存</button>
+      </div>`;
+    }
+    const last=state.shops.length-1;
+    return `<div class="shop-item">
       <span style="flex:1;font-weight:700;font-size:14px">${s.name}</span>
       <span style="font-size:12px;color:var(--text3)">${s.menu.length}品</span>
+      <button class="icon-btn" ${i===0?'disabled style="opacity:0.25;cursor:default"':''} onclick="moveShop(${s.id},-1)">▲</button>
+      <button class="icon-btn" ${i===last?'disabled style="opacity:0.25;cursor:default"':''} onclick="moveShop(${s.id},1)">▼</button>
+      <button class="icon-btn edit" onclick="startShopEdit(${s.id})">✏️</button>
       ${state.shops.length>1?`<button class="btn btn-sm" style="color:var(--red);border-color:#fca5a5" onclick="deleteShop(${s.id})">削除</button>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+function startShopEdit(id){editingShopId=id;renderShopList();const i=document.getElementById('es-name');if(i){i.focus();i.select();}}
+function cancelShopEdit(){editingShopId=null;renderShopList();}
+function saveShopEdit(id){
+  const name=document.getElementById('es-name').value.trim();
+  if(!name)return;
+  const shop=state.shops.find(s=>s.id===id);
+  if(!shop)return;
+  shop.name=name;
+  editingShopId=null;
+  save();
+  renderShopList();
+  populateSels();
+}
+
+function moveShop(id,dir){
+  const i=state.shops.findIndex(s=>s.id===id);
+  const j=i+dir;
+  if(i<0||j<0||j>=state.shops.length)return;
+  [state.shops[i],state.shops[j]]=[state.shops[j],state.shops[i]];
+  save();
+  renderShopList();
+  populateSels();
 }
 
 // 初期描画はFirebase読み込み後に行う
