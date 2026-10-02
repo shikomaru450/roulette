@@ -365,64 +365,79 @@ function drawWheel(){
   ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=2;ctx.stroke();
 }
 
+let spinRAF = null;
+let spinV = 0; // 現在の角速度(rad/ms)
+
 function spin(){
-  const items=getFiltered(state.rCat);
-  if(!items.length||state.spinning)return;
-  state.spinning=true;
-  document.getElementById('spinBtn').disabled=true;
-  document.getElementById('resultArea').innerHTML='';
+  // 回転中に押された場合は停止処理へ
+  if(state.spinning){ stopSpin(); return; }
 
-  const slice=(Math.PI*2)/items.length;
-  const targetIdx=Math.floor(Math.random()*items.length);
-  const targetAngle=Math.PI*1.5-(targetIdx+0.5)*slice;
+  const items = getFiltered(state.rCat);
+  if(!items.length) return;
 
-  const TOTAL=6000;
-  const P1=0.15;
-  const P2=0.35;
-  const K=4;
+  state.spinning = true;
+  state.stopping = false;
+  const btn = document.getElementById('spinBtn');
+  btn.textContent = 'とめる';
+  document.getElementById('resultArea').innerHTML = '';
 
-  const coeff = P1/3 + (P2-P1) + (1-P2)/(K+1);
-  const rounds = 4 + Math.floor(Math.random()*3);
-  const extra = ((targetAngle - state.angle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
-  const totalRot = rounds*(Math.PI*2) + extra;
-  const maxV = totalRot / (TOTAL * coeff);
-
-  const startAngle = state.angle;
+  const MAX_V = 0.012;   // 最高速度(約1.9回転/秒)
+  const RAMP = 600;      // 加速にかける時間(ms)
   const startTime = performance.now();
-
-  function getAngle(t){
-    let progress;
-    if(t < P1){
-      progress = (t*t*t) / (3*P1*P1);
-    } else if(t < P2){
-      const accel = P1/3;
-      progress = accel + (t - P1);
-    } else {
-      const accel = P1/3;
-      const cruise = P2 - P1;
-      const tp = t - P2;
-      const D = 1 - P2;
-      const decel = (D/(K+1)) * (1 - Math.pow((D-tp)/D, K+1));
-      progress = accel + cruise + decel;
-    }
-    return startAngle + maxV * TOTAL * progress;
-  }
+  let last = startTime;
 
   function frame(now){
-    const elapsed = Math.min(now - startTime, TOTAL);
-    const t = elapsed / TOTAL;
-    state.angle = getAngle(t);
+    const dt = now - last; last = now;
+    spinV = MAX_V * Math.min(1, (now - startTime) / RAMP);
+    state.angle += spinV * dt;
     drawWheel();
-    if(elapsed < TOTAL){
-      requestAnimationFrame(frame);
+    spinRAF = requestAnimationFrame(frame);
+  }
+  spinRAF = requestAnimationFrame(frame);
+}
+
+function stopSpin(){
+  if(state.stopping) return;
+  state.stopping = true;
+  cancelAnimationFrame(spinRAF);
+
+  const btn = document.getElementById('spinBtn');
+  btn.disabled = true;
+
+  // 現在の速度から滑らかに減速(3次イーズアウト)
+  const T = 2500 + Math.random() * 1000;  // 減速時間(ms)。少しばらつかせる
+  const D = spinV * T / 3;                // 停止までの回転量(初速と連続になる値)
+  const a0 = state.angle;
+  const t0 = performance.now();
+
+  function frame(now){
+    const t = Math.min(1, (now - t0) / T);
+    state.angle = a0 + D * (1 - Math.pow(1 - t, 3));
+    drawWheel();
+    if(t < 1){
+      spinRAF = requestAnimationFrame(frame);
     } else {
-      state.angle = startAngle + totalRot;
-      state.spinning = false;
-      document.getElementById('spinBtn').disabled = false;
-      showResult(items, targetIdx);
+      finishSpin();
     }
   }
-  requestAnimationFrame(frame);
+  spinRAF = requestAnimationFrame(frame);
+}
+
+function finishSpin(){
+  const items = getFiltered(state.rCat);
+  const btn = document.getElementById('spinBtn');
+  state.spinning = false;
+  state.stopping = false;
+  btn.disabled = false;
+  btn.textContent = 'まわす';
+  if(!items.length) return;
+
+  // ポインタ(上 = 1.5π)の真下にあるメニューを判定
+  const TWO_PI = Math.PI * 2;
+  const slice = TWO_PI / items.length;
+  const pos = (((Math.PI * 1.5 - state.angle) % TWO_PI) + TWO_PI) % TWO_PI;
+  const idx = Math.floor(pos / slice) % items.length;
+  showResult(items, idx);
 }
 
 function showResult(items,idx){
