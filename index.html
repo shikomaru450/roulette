@@ -576,7 +576,7 @@ function renderShopList(){
         // Firebaseのデータを使う
         val.shops.forEach(sh => {
           if (!sh.menu) sh.menu = [];
-          const def = [{id:1,updatable:true},{id:2,updatable:false},{id:3,updatable:false}];
+          const def = [{id:1,updatable:false},{id:2,updatable:false},{id:3,updatable:false}];
           const d = def.find(d => d.id === sh.id);
           if (d) sh.updatable = d.updatable;
         });
