@@ -320,6 +320,7 @@ function onShopChange(){
   document.getElementById('resultArea').innerHTML='';
   renderRCat();drawWheel();
 }
+window.addEventListener('pageshow', e => { if (e.persisted) populateSels(); });
 function onMenuShopChange(){
   state.activeShopId=parseInt(document.getElementById('menuShop').value);state.mCat='すべて';editingId=null;
   const shop=getShop();
@@ -639,6 +640,12 @@ function moveShop(id,dir){
         });
         state.shops = val.shops;
         state.activeShopId = val.activeShopId || val.shops[0].id;
+        // サーティワンが選択中になっていたら、別のお店を初期表示にする
+        const cur = val.shops.find(x => x.id === state.activeShopId);
+        if (cur && cur.name.includes('サーティワン')) {
+          const other = val.shops.find(x => !x.name.includes('サーティワン'));
+          if (other) state.activeShopId = other.id;
+        }
         // nextId/nextShopIdをFirebaseのデータに合わせて更新
         val.shops.forEach(s => {
           if(s.id >= nextShopId) nextShopId = s.id + 1;
