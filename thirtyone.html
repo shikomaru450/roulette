@@ -38,10 +38,13 @@ input:focus,select:focus{outline:none;border-color:var(--p)}
 .wheel{position:relative;width:min(300px,80vw);aspect-ratio:1;margin:12px auto 14px}
 .wheel canvas{width:100%;height:100%}
 .ptr{position:absolute;top:-16px;left:50%;transform:translateX(-50%);color:var(--r);font-size:26px;z-index:2;line-height:1}
-.res{font-size:22px;font-weight:700;color:var(--p);margin:0 0 12px}
+.res{font-size:22px;font-weight:700;color:var(--p);margin:0 0 4px}
+.slot{min-height:76px;display:flex;flex-direction:column;justify-content:center;margin-bottom:10px}
+.nxt{font-size:12px;color:var(--t2)}
 .nm{font-weight:700;min-width:64px}.dt{line-height:1.7;color:var(--t2)}
 .link{display:block;margin:6px auto;background:none;border:none;color:var(--t3);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
 .empty{color:var(--t3);font-size:13px;padding:10px 0}
+.legend{font-size:12px;color:var(--t2);min-height:20px;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -110,7 +113,7 @@ function save(){
 const nameOf=(l,id)=>{const o=cfg[l].find(x=>x.id===id);return o?o.name:'(削除済)'};
 const cnt=m=>cfg.counts.find(c=>c.id===ses.counts[m.id]);
 function tab(n){
-  if(ui.spinning)return;
+  if(ui.phase==='spin'||ui.phase==='stop')return;
   $('play').style.display=n==='play'?'':'none';
   $('set').style.display=n==='set'?'':'none';
   $('t-play').className=n==='play'?'on':'';
@@ -161,7 +164,7 @@ function nextTask(){
   return null;
 }
 function itemsFor(t){
-  const mk=o=>({id:o.id,label:o.name});
+  const mk=o=>({id:o.id,label:o.name,tag:o.tag});
   if(t.t==='count')return cfg.counts.filter(o=>o.enabled).map(mk);
   if(t.t==='cup')return cfg.cups.filter(o=>o.enabled).map(mk);
   let f=cfg.flavors.filter(o=>o.enabled&&(ui.tag==='すべて'||o.tag===ui.tag));
@@ -177,7 +180,7 @@ function sumTable(){
     const pend=c&&fl.length<c.spins?` (${fl.length}/${c.spins})`:'';
     return `<div class="row top"><div class="nm">${esc(m.name)}</div><div class="dt">個数: ${c?esc(c.name):'—'}<br>カップ: ${esc(cup)}<br>種類:${pend}${list}</div></div>`;
   }).join('');
-  return `<div class="card"><div class="sec">けっか一覧</div>${r}</div>`;
+  return `<div class="card"><div class="sec">結果一覧</div>${r}</div>`;
 }
 
 function resultText(){
@@ -196,6 +199,13 @@ function copyResult(){
 }
 function shareResult(){navigator.share({text:resultText()}).catch(()=>{})}
 
+const LAB={count:'個数',cup:'カップ',flavor:'種類'};
+function setTask(t){
+  ui.task=t;ui.items=itemsFor(t);
+  let prog='';
+  if(t.t==='flavor'){const c=cnt(t.m);prog=` (${(ses.flavors[t.m.id]||[]).length+1}/${c.spins}回目)`}
+  ui.head=`<div class="who"><b>${esc(t.m.name)}</b> の <b>${LAB[t.t]}</b>${prog}</div>`;
+}
 function renderPlay(){
   const el=$('play');
   if(!ses.started){
@@ -207,10 +217,10 @@ function renderPlay(){
       <div class="center"><button class="btn g big" ${ses.members.length?'':'disabled'} onclick="start()">スタート</button></div>`;
     return;
   }
-  if(ui.phase!=='shown'){
+  if(ui.phase==='idle'){
     const t=nextTask();
     if(!t){
-      el.innerHTML=`<div class="card center"><div class="who"><b>けっか発表 🎉</b></div></div>${sumTable()}
+      el.innerHTML=`<div class="card center"><div class="who"><b>結果発表 🎉</b></div></div>${sumTable()}
         <div class="card center"><div class="sec">結果を送る</div>
           <a class="btn g" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener"
              href="https://line.me/R/msg/text/?${encodeURIComponent(resultText())}">LINEで送る</a>
@@ -220,23 +230,29 @@ function renderPlay(){
         <div class="center"><button class="btn g big" onclick="resetAll()">もう一度(メンバーそのまま)</button></div>`;
       return;
     }
-    ui.task=t;ui.items=itemsFor(t);ui.phase='idle';
-    const lab={count:'個数',cup:'カップ',flavor:'種類'}[t.t];
-    let prog='';
-    if(t.t==='flavor'){const c=cnt(t.m);prog=` (${(ses.flavors[t.m.id]||[]).length+1}/${c.spins}回目)`}
-    ui.head=`<div class="who"><b>${esc(t.m.name)}</b> の <b>${lab}</b>${prog}</div>`;
+    setTask(t);
   }
-  const idle=ui.phase==='idle';
-  const chips=idle&&ui.task.t==='flavor'?`<div class="chips">${['すべて',...TAGS].map(g=>`<span class="chip ${g===ui.tag?'on':''}" onclick="setTag('${g}')">${g}</span>`).join('')}</div>`:'';
-  const none=!ui.items.length;
-  el.innerHTML=`<div class="card center">${ui.head}${chips}
+  const ph=ui.phase;
+  let slot='',label='まわす',dis=false;
+  const legend=ui.task&&ui.task.t==='flavor'?'<span style="color:#2B4C9B">■</span> 定番　<span style="color:#D6338A">■</span> 期間限定':'';
+  if(ph==='spin')label='とめる';
+  if(ph==='stop'){label='とめる';dis=true}
+  if(ph==='shown'){
+    const n=nextTask();
+    slot=`<div class="res">${esc(ui.shown)}</div><div class="nxt">${n?`つぎ: ${esc(n.m.name)} の ${LAB[n.t]}`:'これで全員おわり!'}</div>`;
+    if(!n)label='結果を見る';
+  }else if(!ui.items.length){
+    slot='<div class="nxt">ルーレットに出せる項目がありません。設定で追加・有効化してください</div>';
+    dis=true;
+  }
+    el.innerHTML=`<div class="card center">${ui.head}<div class="legend">${legend}</div>
     <div class="wheel"><div class="ptr">▼</div><canvas id="wheel" width="600" height="600"></canvas></div>
-    ${none?'<div class="empty">ルーレットに出せる項目がありません。設定で追加・有効化してください</div>':''}
-    ${idle?`<button class="btn g big" ${none?'disabled':''} onclick="spin()">まわす</button>`
-          :`<div class="res">${esc(ui.shown)}</div><button class="btn g big" onclick="nextStep()">つぎへ</button>`}
+    <div class="slot">${slot}</div>
+    <button class="btn g big" id="spinBtn" ${dis?'disabled':''} onclick="spin()">${label}</button>
     </div>${sumTable()}<button class="link" onclick="resetAll(true)">最初からやり直す</button>`;
   draw();
 }
+
 const addMember=()=>{const n=$('mn').value.trim();if(!n)return;ses.members.push({id:nid(),name:n});save();renderPlay()};
 const rmMember=id=>{ses.members=ses.members.filter(m=>m.id!==id);save();renderPlay()};
 function start(){
@@ -260,7 +276,7 @@ function draw(){
   it.forEach((o,i)=>{
     const s=ui.angle+i*sl;
     x.beginPath();x.moveTo(cx,cx);x.arc(cx,cx,r,s,s+sl);x.closePath();
-    x.fillStyle=PAL[i%PAL.length];x.fill();x.strokeStyle='#fff';x.lineWidth=3;x.stroke();
+    x.fillStyle=segColor(o,i);x.fill();x.strokeStyle='#fff';x.lineWidth=3;x.stroke();
     x.save();x.translate(cx,cx);x.rotate(s+sl/2);
     x.fillStyle='#fff';x.font=`bold ${fs}px sans-serif`;x.textAlign='right';x.textBaseline='middle';
     x.shadowColor='rgba(0,0,0,.45)';x.shadowBlur=4;
@@ -268,25 +284,50 @@ function draw(){
   });
   x.beginPath();x.arc(cx,cx,30,0,TAU);x.fillStyle='#fff';x.fill();
 }
+
+const TAGC={'定番':['#2B4C9B','#4A68B8'],'期間限定':['#D6338A','#E8639F']};
+function segColor(o,i){const p=TAGC[o.tag];return p?p[i%2]:PAL[i%PAL.length]}
+
+let spinRAF=0,spinV=0;
 function spin(){
-  if(ui.spinning||!ui.items.length)return;
-  ui.spinning=true;
-  const n=ui.items.length,sl=TAU/n,idx=Math.floor(Math.random()*n);
-  const target=Math.PI*1.5-(idx+.5)*sl;
-  const extra=((target-ui.angle)%TAU+TAU)%TAU;
-  const total=(4+Math.floor(Math.random()*3))*TAU+extra,a0=ui.angle,T=4500,t0=performance.now();
-  document.querySelector('#play .big').disabled=true;
+  if(ui.phase==='spin'){stopSpin();return}
+  if(ui.phase==='stop')return;
+  if(ui.phase==='shown'){
+    const t=nextTask();
+    if(!t){ui.phase='idle';renderPlay();return}
+    setTask(t);
+  }
+  if(!ui.items.length)return;
+  ui.phase='spin';ui.shown='';
+  renderPlay();
+  const MAXV=0.012,RAMP=600,t0=performance.now();let last=t0;
+  (function f(now){
+    const dt=Math.min(now-last,50);last=now;
+    spinV=MAXV*Math.min(1,(now-t0)/RAMP);
+    ui.angle+=spinV*dt;draw();
+    spinRAF=requestAnimationFrame(f);
+  })(t0);
+}
+function stopSpin(){
+  cancelAnimationFrame(spinRAF);
+  ui.phase='stop';
+  const b=$('spinBtn');if(b)b.disabled=true;
+  const T=2500+Math.random()*1000,D=spinV*T/3,a0=ui.angle,t0=performance.now();
   (function f(now){
     const t=Math.min(1,(now-t0)/T);
-    ui.angle=a0+total*(1-Math.pow(1-t,4));draw();
+    ui.angle=a0+D*(1-Math.pow(1-t,3));draw();
     if(t<1){requestAnimationFrame(f);return}
-    ui.spinning=false;
-    const it=ui.items[idx],m=ui.task.m;
-    if(ui.task.t==='count')ses.counts[m.id]=it.id;
-    else if(ui.task.t==='cup')ses.cups[m.id]=it.id;
-    else(ses.flavors[m.id]=ses.flavors[m.id]||[]).push(it.id);
-    ui.shown=it.label;ui.phase='shown';save();renderPlay();
+    finish();
   })(t0);
+}
+function finish(){
+  const it=ui.items,n=it.length;
+  const pos=((Math.PI*1.5-ui.angle)%TAU+TAU)%TAU;
+  const o=it[Math.floor(pos/(TAU/n))%n],m=ui.task.m;
+  if(ui.task.t==='count')ses.counts[m.id]=o.id;
+  else if(ui.task.t==='cup')ses.cups[m.id]=o.id;
+  else(ses.flavors[m.id]=ses.flavors[m.id]||[]).push(o.id);
+  ui.shown=o.label;ui.phase='shown';save();renderPlay();
 }
 
 /* ---------- 起動 ---------- */
