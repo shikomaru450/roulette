@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>サーティワンルーレット</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--p:#D6338A;--pd:#A81F68;--pl:#FCE7F3;--b:#2B4C9B;--bg:#FAF7F8;--bd:#EADFE5;--t2:#666;--t3:#aaa;--r:#E24B4A}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Zen Maru Gothic',sans-serif;background:var(--bg);min-height:100dvh;color:#1a1a1a}
+.app{max-width:480px;margin:0 auto;padding:10px 14px 40px}
+h1{font-size:18px;color:var(--b);text-align:center;letter-spacing:.1em}
+.sync{font-size:10px;text-align:center;color:var(--t3);margin:2px 0 8px}
+.back{display:block;text-align:center;font-size:12px;color:var(--t2);text-decoration:none;margin:2px 0 4px}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tabs button{flex:1;padding:9px;border-radius:99px;border:1.5px solid var(--bd);background:#fff;font:inherit;font-size:14px;color:var(--t2);cursor:pointer}
+.tabs button.on{background:var(--b);color:#fff;border-color:var(--b)}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.center{text-align:center}
+.sec{font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.row:last-child{border:none}
+.top{align-items:flex-start;flex-wrap:nowrap}
+input,select{font:inherit;font-size:13px;padding:8px 9px;border:1.5px solid var(--bd);border-radius:9px;background:#fff;min-width:0}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--p);flex-shrink:0;padding:0}
+input:focus,select:focus{outline:none;border-color:var(--p)}
+.btn{padding:9px 14px;border-radius:10px;border:1.5px solid var(--bd);background:#fff;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn.g{background:var(--p);color:#fff;border-color:var(--p)}
+.btn:disabled{background:#ccc;border-color:#ccc;color:#fff;cursor:not-allowed}
+.big{font-size:16px;font-weight:700;padding:12px 28px;border-radius:99px}
+.x{background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:2px 6px}
+.add{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips{margin-bottom:8px}
+.chip{display:inline-block;padding:5px 12px;border-radius:99px;font-size:11px;border:1.5px solid var(--bd);background:#fff;color:var(--t2);margin:0 3px;cursor:pointer}
+.chip.on{background:var(--p);color:#fff;border-color:var(--p)}
+.who{font-size:15px;margin-bottom:8px}.who b{color:var(--p)}
+.wheel{position:relative;width:min(300px,80vw);aspect-ratio:1;margin:12px auto 14px}
+.wheel canvas{width:100%;height:100%}
+.ptr{position:absolute;top:-16px;left:50%;transform:translateX(-50%);color:var(--r);font-size:26px;z-index:2;line-height:1}
+.res{font-size:22px;font-weight:700;color:var(--p);margin:0 0 12px}
+.nm{font-weight:700;min-width:64px}.dt{line-height:1.7;color:var(--t2)}
+.link{display:block;margin:6px auto;background:none;border:none;color:var(--t3);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
+.empty{color:var(--t3);font-size:13px;padding:10px 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🍨 サーティワンルーレット</h1>
+  <a href="index.html" class="back">← ごはんルーレットに戻る</a>   <!-- ← 追加 -->
+  <div class="sync" id="sync">🔄 同期中...</div>
+  <div class="tabs">
+    <button id="t-play" class="on" onclick="tab('play')">あそぶ</button>
+    <button id="t-set" onclick="tab('set')">設定</button>
+  </div>
+  <div id="play"></div>
+  <div id="set" style="display:none"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TAU=Math.PI*2,TAGS=['定番','期間限定'];
+const PAL=['#D6338A','#2B4C9B','#F08A4B','#2FA896','#8B5CF6','#D99A1E','#D6455D','#4A90D9'];
+let uid=Date.now();const nid=()=>'i'+(uid++);
+
+let db=null;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyBO9hsGP2oEnJ9xU28IqyGX5l1cKI-owxk",
+    authDomain:"gohan-roulette-shikomaru450.firebaseapp.com",
+    databaseURL:"https://gohan-roulette-shikomaru450-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"gohan-roulette-shikomaru450",
+    storageBucket:"gohan-roulette-shikomaru450.firebasestorage.app",
+    messagingSenderId:"780366811198",
+    appId:"1:780366811198:web:7907ce6eeb1aa5fe27016f"
+  });
+  db=firebase.database();
+}catch(e){console.error(e)}
+
+const seed=()=>({
+  counts:[
+    {id:'c1',name:'スモールダブル',cup:true,spins:2,enabled:true},
+    {id:'c2',name:'バラエティパック',cup:false,spins:6,enabled:true},
+    {id:'c3',name:'ファミリーパック',cup:false,spins:8,enabled:true}],
+  cups:[{id:'u1',name:'カップ',enabled:true},{id:'u2',name:'コーン',enabled:true}],
+  flavors:['ポッピングシャワー','チョコレートミント','バニラ','ストロベリー','ラブポーションサーティワン']
+    .map((n,i)=>({id:'f'+i,name:n,tag:'定番',enabled:true}))
+});
+const newSes=()=>({members:[],started:false,counts:{},cups:{},flavors:{},dup:false});
+let cfg=seed(),ses=newSes();
+let ui={tag:'すべて',angle:0,spinning:false,phase:'idle',items:[],task:null,head:'',shown:''};
+
+/* ---------- 保存 ---------- */
+const setSync=t=>$('sync').textContent=t;
+let tm;
+function save(){
+  if(!db)return;
+  clearTimeout(tm);
+  tm=setTimeout(()=>{
+    Promise.all([db.ref('thirtyone/config').set(cfg),db.ref('thirtyone/session').set(ses)])
+      .then(()=>setSync('☁️ 同期済み'))
+      .catch(e=>{setSync('⚠️ 保存エラー');console.error(e)});
+  },500);
+}
+
+/* ---------- 共通 ---------- */
+const nameOf=(l,id)=>{const o=cfg[l].find(x=>x.id===id);return o?o.name:'(削除済)'};
+const cnt=m=>cfg.counts.find(c=>c.id===ses.counts[m.id]);
+function tab(n){
+  if(ui.spinning)return;
+  $('play').style.display=n==='play'?'':'none';
+  $('set').style.display=n==='set'?'':'none';
+  $('t-play').className=n==='play'?'on':'';
+  $('t-set').className=n==='set'?'on':'';
+  n==='play'?renderPlay():renderSet();
+}
+
+/* ---------- 設定画面 ---------- */
+const en=(l,o)=>`<input type="checkbox" ${o.enabled?'checked':''} onchange="upd('${l}','${o.id}','enabled',this.checked)">`;
+const nmI=(l,o)=>`<input style="flex:1;min-width:90px" value="${esc(o.name)}" onchange="upd('${l}','${o.id}','name',this.value.trim())">`;
+const dl=(l,o)=>`<button class="x" onclick="del('${l}','${o.id}')">✕</button>`;
+const rows=(l,fn)=>cfg[l].map(fn).join('')||'<div class="empty">まだありません。下から追加してください</div>';
+
+function renderSet(){
+  $('set').innerHTML=`
+  <div class="card"><div class="sec">個数(スモールダブル、パックなど)</div>
+    ${rows('counts',o=>`<div class="row">${en('counts',o)}${nmI('counts',o)}
+      <select onchange="upd('counts','${o.id}','cup',this.value==='1')">
+        <option value="1" ${o.cup?'selected':''}>カップ要</option><option value="0" ${o.cup?'':'selected'}>カップなし</option></select>
+      <input type="number" min="1" style="width:56px" value="${o.spins}" onchange="upd('counts','${o.id}','spins',Math.max(1,parseInt(this.value)||1))">種類${dl('counts',o)}</div>`)}
+    <div class="add"><input id="ac-n" placeholder="名称" style="flex:1;min-width:110px">
+      <select id="ac-c"><option value="1">カップ要</option><option value="0">カップなし</option></select>
+      <input id="ac-s" type="number" min="1" value="2" style="width:60px"><button class="btn g" onclick="addCount()">追加</button></div>
+  </div>
+  <div class="card"><div class="sec">カップ</div>
+    ${rows('cups',o=>`<div class="row">${en('cups',o)}${nmI('cups',o)}${dl('cups',o)}</div>`)}
+    <div class="add"><input id="au-n" placeholder="カップの名称" style="flex:1"><button class="btn g" onclick="addCup()">追加</button></div>
+  </div>
+  <div class="card"><div class="sec">種類(フレーバー)</div>
+    ${rows('flavors',o=>`<div class="row">${en('flavors',o)}${nmI('flavors',o)}
+      <select onchange="upd('flavors','${o.id}','tag',this.value)">${TAGS.map(t=>`<option ${o.tag===t?'selected':''}>${t}</option>`).join('')}</select>${dl('flavors',o)}</div>`)}
+    <div class="add"><input id="af-n" placeholder="フレーバー名" style="flex:1;min-width:110px">
+      <select id="af-t">${TAGS.map(t=>`<option>${t}</option>`).join('')}</select><button class="btn g" onclick="addFlavor()">追加</button></div>
+  </div>`;
+}
+function upd(l,id,k,v){const o=cfg[l].find(x=>x.id===id);if(!o||(k==='name'&&!v))return;o[k]=v;save()}
+function del(l,id){if(!confirm('削除しますか?'))return;cfg[l]=cfg[l].filter(o=>o.id!==id);save();renderSet()}
+function addCount(){const n=$('ac-n').value.trim();if(!n)return;
+  cfg.counts.push({id:nid(),name:n,cup:$('ac-c').value==='1',spins:Math.max(1,parseInt($('ac-s').value)||1),enabled:true});save();renderSet()}
+function addCup(){const n=$('au-n').value.trim();if(!n)return;cfg.cups.push({id:nid(),name:n,enabled:true});save();renderSet()}
+function addFlavor(){const n=$('af-n').value.trim();if(!n)return;cfg.flavors.push({id:nid(),name:n,tag:$('af-t').value,enabled:true});save();renderSet()}
+
+/* ---------- あそぶ: 進行 ---------- */
+function nextTask(){
+  for(const m of ses.members)if(!ses.counts[m.id])return{t:'count',m};
+  for(const m of ses.members){const c=cnt(m);if(c&&c.cup&&!ses.cups[m.id])return{t:'cup',m}}
+  for(const m of ses.members){const c=cnt(m);if(c&&(ses.flavors[m.id]||[]).length<c.spins)return{t:'flavor',m}}
+  return null;
+}
+function itemsFor(t){
+  const mk=o=>({id:o.id,label:o.name});
+  if(t.t==='count')return cfg.counts.filter(o=>o.enabled).map(mk);
+  if(t.t==='cup')return cfg.cups.filter(o=>o.enabled).map(mk);
+  let f=cfg.flavors.filter(o=>o.enabled&&(ui.tag==='すべて'||o.tag===ui.tag));
+  if(!ses.dup){const got=ses.flavors[t.m.id]||[];const g=f.filter(o=>!got.includes(o.id));if(g.length)f=g}
+  return f.map(mk);
+}
+function sumTable(){
+  const r=ses.members.map(m=>{
+    const c=cnt(m),fl=ses.flavors[m.id]||[];
+    const cup=ses.cups[m.id]?nameOf('cups',ses.cups[m.id]):(c&&!c.cup?'なし':'—');
+    const fs=fl.map(id=>nameOf('flavors',id)).join('、')||'—';
+    const pend=c&&fl.length<c.spins?` (${fl.length}/${c.spins})`:'';
+    return `<div class="row top"><div class="nm">${esc(m.name)}</div><div class="dt">個数: ${c?esc(c.name):'—'}<br>カップ: ${esc(cup)}<br>種類: ${esc(fs)}${pend}</div></div>`;
+  }).join('');
+  return `<div class="card"><div class="sec">けっか一覧</div>${r}</div>`;
+}
+
+function renderPlay(){
+  const el=$('play');
+  if(!ses.started){
+    el.innerHTML=`<div class="card"><div class="sec">参加メンバー</div>
+      ${ses.members.map(m=>`<div class="row"><span style="flex:1">${esc(m.name)}</span><button class="x" onclick="rmMember('${m.id}')">✕</button></div>`).join('')||'<div class="empty">名前を入れて追加してください</div>'}
+      <div class="add"><input id="mn" placeholder="名前" style="flex:1" onkeydown="if(event.key==='Enter')addMember()"><button class="btn g" onclick="addMember()">追加</button></div>
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--t2);margin-top:12px">
+        <input type="checkbox" ${ses.dup?'checked':''} onchange="ses.dup=this.checked;save()">同じ人が同じ種類を重複して引いてもOK</label></div>
+      <div class="center"><button class="btn g big" ${ses.members.length?'':'disabled'} onclick="start()">スタート</button></div>`;
+    return;
+  }
+  if(ui.phase!=='shown'){
+    const t=nextTask();
+    if(!t){
+      el.innerHTML=`<div class="card center"><div class="who"><b>けっか発表 🎉</b></div></div>${sumTable()}
+        <div class="center"><button class="btn g big" onclick="resetAll()">もう一度(メンバーそのまま)</button></div>`;
+      return;
+    }
+    ui.task=t;ui.items=itemsFor(t);ui.phase='idle';
+    const lab={count:'個数',cup:'カップ',flavor:'種類'}[t.t];
+    let prog='';
+    if(t.t==='flavor'){const c=cnt(t.m);prog=` (${(ses.flavors[t.m.id]||[]).length+1}/${c.spins}回目)`}
+    ui.head=`<div class="who"><b>${esc(t.m.name)}</b> の <b>${lab}</b>${prog}</div>`;
+  }
+  const idle=ui.phase==='idle';
+  const chips=idle&&ui.task.t==='flavor'?`<div class="chips">${['すべて',...TAGS].map(g=>`<span class="chip ${g===ui.tag?'on':''}" onclick="setTag('${g}')">${g}</span>`).join('')}</div>`:'';
+  const none=!ui.items.length;
+  el.innerHTML=`<div class="card center">${ui.head}${chips}
+    <div class="wheel"><div class="ptr">▼</div><canvas id="wheel" width="600" height="600"></canvas></div>
+    ${none?'<div class="empty">ルーレットに出せる項目がありません。設定で追加・有効化してください</div>':''}
+    ${idle?`<button class="btn g big" ${none?'disabled':''} onclick="spin()">まわす</button>`
+          :`<div class="res">${esc(ui.shown)}</div><button class="btn g big" onclick="nextStep()">つぎへ</button>`}
+    </div>${sumTable()}<button class="link" onclick="resetAll(true)">最初からやり直す</button>`;
+  draw();
+}
+const addMember=()=>{const n=$('mn').value.trim();if(!n)return;ses.members.push({id:nid(),name:n});save();renderPlay()};
+const rmMember=id=>{ses.members=ses.members.filter(m=>m.id!==id);save();renderPlay()};
+function start(){
+  if(!cfg.counts.some(o=>o.enabled)){alert('設定で個数を追加・有効化してください');return}
+  ses.started=true;ui.phase='idle';save();renderPlay();
+}
+const setTag=g=>{if(ui.spinning)return;ui.tag=g;renderPlay()};
+const nextStep=()=>{ui.phase='idle';renderPlay()};
+function resetAll(ask){
+  if(ask&&!confirm('結果を消して最初からやり直しますか?'))return;
+  ses=Object.assign(newSes(),{members:ses.members,dup:ses.dup});ui.phase='idle';save();renderPlay();
+}
+
+/* ---------- ホイール ---------- */
+function draw(){
+  const c=$('wheel');if(!c)return;
+  const x=c.getContext('2d'),cx=300,r=290,it=ui.items;
+  x.clearRect(0,0,600,600);
+  if(!it.length){x.fillStyle='#e0e0e0';x.beginPath();x.arc(cx,cx,r,0,TAU);x.fill();return}
+  const sl=TAU/it.length,fs=Math.max(15,Math.min(26,300/it.length)),ml=it.length>12?8:11;
+  it.forEach((o,i)=>{
+    const s=ui.angle+i*sl;
+    x.beginPath();x.moveTo(cx,cx);x.arc(cx,cx,r,s,s+sl);x.closePath();
+    x.fillStyle=PAL[i%PAL.length];x.fill();x.strokeStyle='#fff';x.lineWidth=3;x.stroke();
+    x.save();x.translate(cx,cx);x.rotate(s+sl/2);
+    x.fillStyle='#fff';x.font=`bold ${fs}px sans-serif`;x.textAlign='right';x.textBaseline='middle';
+    x.shadowColor='rgba(0,0,0,.45)';x.shadowBlur=4;
+    x.fillText(o.label.length>ml?o.label.slice(0,ml)+'…':o.label,r-18,0);x.restore();
+  });
+  x.beginPath();x.arc(cx,cx,30,0,TAU);x.fillStyle='#fff';x.fill();
+}
+function spin(){
+  if(ui.spinning||!ui.items.length)return;
+  ui.spinning=true;
+  const n=ui.items.length,sl=TAU/n,idx=Math.floor(Math.random()*n);
+  const target=Math.PI*1.5-(idx+.5)*sl;
+  const extra=((target-ui.angle)%TAU+TAU)%TAU;
+  const total=(4+Math.floor(Math.random()*3))*TAU+extra,a0=ui.angle,T=4500,t0=performance.now();
+  document.querySelector('#play .big').disabled=true;
+  (function f(now){
+    const t=Math.min(1,(now-t0)/T);
+    ui.angle=a0+total*(1-Math.pow(1-t,4));draw();
+    if(t<1){requestAnimationFrame(f);return}
+    ui.spinning=false;
+    const it=ui.items[idx],m=ui.task.m;
+    if(ui.task.t==='count')ses.counts[m.id]=it.id;
+    else if(ui.task.t==='cup')ses.cups[m.id]=it.id;
+    else(ses.flavors[m.id]=ses.flavors[m.id]||[]).push(it.id);
+    ui.shown=it.label;ui.phase='shown';save();renderPlay();
+  })(t0);
+}
+
+/* ---------- 起動 ---------- */
+function init(){renderPlay()}
+if(!db){setSync('⚠️ 接続エラー(オフライン)');init()}
+else db.ref('thirtyone').once('value').then(s=>{
+  const v=s.val()||{},c=v.config;
+  if(c&&((c.counts||[]).length||(c.cups||[]).length||(c.flavors||[]).length))
+    cfg={counts:c.counts||[],cups:c.cups||[],flavors:c.flavors||[]};
+  else{cfg=seed();save()}
+  if(v.session){const q=v.session;
+    ses={members:q.members||[],started:!!q.started,counts:q.counts||{},cups:q.cups||{},flavors:q.flavors||{},dup:!!q.dup}}
+  setSync('☁️ 同期済み');init();
+}).catch(e=>{console.error(e);setSync('⚠️ 接続エラー(オフライン)');init()});
+</script>
+</body>
+</html>

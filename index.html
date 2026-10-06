@@ -307,7 +307,19 @@ function populateSels(){
     s.innerHTML=state.shops.map(sh=>`<option value="${sh.id}" ${sh.id===state.activeShopId?'selected':''}>${sh.name}</option>`).join('');
   });
 }
-function onShopChange(){state.activeShopId=parseInt(document.getElementById('activeShop').value);state.rCat='すべて';document.getElementById('resultArea').innerHTML='';renderRCat();drawWheel();}
+function onShopChange(){
+  const id=parseInt(document.getElementById('activeShop').value);
+  const s=state.shops.find(x=>x.id===id);
+  if(s&&s.name.includes('サーティワン')){
+    // 戻ってきたときに選び直せるよう、セレクトを元の店に戻してから移動
+    document.getElementById('activeShop').value=state.activeShopId;
+    location.href='thirtyone.html';
+    return;
+  }
+  state.activeShopId=id;state.rCat='すべて';
+  document.getElementById('resultArea').innerHTML='';
+  renderRCat();drawWheel();
+}
 function onMenuShopChange(){
   state.activeShopId=parseInt(document.getElementById('menuShop').value);state.mCat='すべて';editingId=null;
   const shop=getShop();
