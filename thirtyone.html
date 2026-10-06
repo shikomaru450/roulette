@@ -184,13 +184,16 @@ function sumTable(){
 }
 
 function resultText(){
-  const rows=ses.members.map(m=>{
+  const blocks=ses.members.map(m=>{
     const c=cnt(m);
-    const cup=ses.cups[m.id]?nameOf('cups',ses.cups[m.id]):null;
-    const fl=(ses.flavors[m.id]||[]).map(id=>nameOf('flavors',id)).join('、');
-    return `${m.name}：${[c?c.name:'—',cup,fl].filter(Boolean).join(' / ')}`;
+    const lines=[`【${m.name}】`,`個数：${c?c.name:'—'}`];
+    if(ses.cups[m.id])lines.push(`カップ：${nameOf('cups',ses.cups[m.id])}`);
+    const fl=(ses.flavors[m.id]||[]).map(id=>nameOf('flavors',id));
+    if(fl.length){lines.push('種類：');fl.forEach(n=>lines.push('・'+n))}
+    else lines.push('種類：—');
+    return lines.join('\n');
   });
-  return '🍨 サーティワンの結果\n'+rows.join('\n');
+  return '🍨 サーティワンの結果\n\n'+blocks.join('\n\n');
 }
 function copyResult(){
   const t=resultText();
